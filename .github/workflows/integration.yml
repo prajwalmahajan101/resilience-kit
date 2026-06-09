@@ -29,6 +29,8 @@ jobs:
           enable-cache: true
       - name: Install deps
         run: uv sync --all-extras --group dev --group test-integration --python 3.12
+      - name: Install fake-third-party fixture (proves entry-point chain)
+        run: uv pip install -e tests/fixtures/fake_third_party --python 3.12
       - name: Run integration suite
         env:
           # Lets the testcontainers fixture pick the right image.

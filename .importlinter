@@ -13,6 +13,12 @@ layers =
     resilience_kit.testing.reset
     resilience_kit.http_client.client
     resilience_kit.http_client.session
+    resilience_kit.audit.decorators : resilience_kit.audit.factory
+    resilience_kit.tasks.queue
+    resilience_kit.middleware.exception_logging : resilience_kit.middleware.rate_limit_headers : resilience_kit.middleware.request_id : resilience_kit.middleware.body_limit : resilience_kit.middleware.security_headers : resilience_kit.middleware.selective_cors
+    resilience_kit.audit.dispatch
+    resilience_kit.audit.sanitizers : resilience_kit.audit.backends.stdlib_logging : resilience_kit.audit.backends.noop : resilience_kit.audit.backends.base
+    resilience_kit.tasks.registry : resilience_kit.dispatch.fire_and_forget : resilience_kit.health
     resilience_kit.http_client.dns_pin : resilience_kit.http_client.errors : resilience_kit.http_client.auth : resilience_kit.crypto.fernet
     resilience_kit.ssrf.guard : resilience_kit.ssrf._ipchecks : resilience_kit.crypto.exceptions
     resilience_kit.decorators

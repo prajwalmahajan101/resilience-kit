@@ -71,7 +71,7 @@ Legend: 🟦 core primitive · 🟩 backend / provider · 🟨 adapter · 🟧 d
 
 ---
 
-## M3 — HTTP client + SSRF + crypto 🟦
+## M3 — HTTP client + SSRF + crypto 🟦 ✅ shipped
 
 **Goal.** One outbound HTTP call is fully protected with one decorator.
 

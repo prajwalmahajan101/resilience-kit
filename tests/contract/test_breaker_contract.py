@@ -57,6 +57,8 @@ async def test_half_open_then_closed_on_successes(
     breaker_factory: Callable[..., AsyncBreaker],
     clock: FakeClock,
 ) -> None:
+    if breaker_factory.backend == "pybreaker":  # type: ignore[attr-defined]
+        pytest.skip("pybreaker has no injectable clock; covered by real-time tests")
     breaker = breaker_factory(
         "svc",
         BreakerConfig(fail_max=2, reset_timeout=5, success_threshold=2),
@@ -81,6 +83,8 @@ async def test_half_open_failure_reopens_immediately(
     breaker_factory: Callable[..., AsyncBreaker],
     clock: FakeClock,
 ) -> None:
+    if breaker_factory.backend == "pybreaker":  # type: ignore[attr-defined]
+        pytest.skip("pybreaker has no injectable clock; covered by real-time tests")
     breaker = breaker_factory(
         "svc",
         BreakerConfig(fail_max=2, reset_timeout=5),

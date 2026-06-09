@@ -8,7 +8,7 @@
 [![CI](https://github.com/prajwalmahajan101/resilience-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/prajwalmahajan101/resilience-kit/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** v0.1 — pre-release, no code shipped yet. Design is locked across four docs:
+> **Status:** v0.1 — pre-release. **M0–M3 merged** (scaffold · in-memory primitives · Redis/pybreaker backends · HTTP client + SSRF + crypto); latest dev checkpoint is [`milestone/m3`](https://github.com/prajwalmahajan101/resilience-kit/tree/milestone/m3). M4–M8 outstanding; no PyPI release yet — the first installable version will be `v0.1.0` (see [Tagging convention](./docs/ROADMAP.md#tagging-convention)). Design is locked across four docs:
 >
 > | Doc | What it answers |
 > |---|---|

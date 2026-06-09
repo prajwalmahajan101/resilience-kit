@@ -256,42 +256,42 @@ except ImportError as exc:                       # pragma: no cover
 sequenceDiagram
     autonumber
     participant U as User code
-    participant R as @resilient("svc")
-    participant CB as Circuit breaker (provider-resolved)
-    participant RT as Retry (per-service config)
-    participant F as Wrapped function
+    participant R as resilient_svc
+    participant CB as Breaker
+    participant RT as Retry
+    participant F as Wrapped fn
     participant M as MetricsSink
     participant A as Audit dispatcher
 
-    U->>R: call args
-    R->>CB: call(retry_wrapped(F), args)
-    CB->>CB: state()  (Lua EVALSHA / in-mem)
-    alt state == OPEN
+    U->>R: call with args
+    R->>CB: invoke retry-wrapped fn
+    CB->>CB: read state
+    alt state is OPEN
         CB-->>U: raise ServiceUnavailableError
-        CB->>M: incr("breaker.short_circuit", svc)
-    else state in {CLOSED, HALF_OPEN}
-        CB->>RT: retry_wrapped(F)(args)
-        loop attempt = 1..max
-            RT->>F: F(*args)
+        CB->>M: incr breaker.short_circuit
+    else state is CLOSED or HALF_OPEN
+        CB->>RT: invoke wrapped fn
+        loop attempt 1 to max
+            RT->>F: call
             alt success
                 F-->>RT: result
-                RT->>M: timing("retry.success", attempt)
+                RT->>M: timing retry.success
                 RT-->>CB: result
                 CB->>CB: record_success
-                opt was HALF_OPEN and success_count >= threshold
-                    CB->>CB: → CLOSED
+                opt HALF_OPEN and threshold reached
+                    CB->>CB: transition to CLOSED
                 end
-                CB->>M: timing("call.duration", elapsed_ms)
+                CB->>M: timing call.duration
                 CB-->>U: result
             else retriable exception
-                RT->>RT: sleep backoff+jitter, increment attempt
+                RT->>RT: sleep backoff with jitter, then retry
             else non-retriable
                 RT-->>CB: raise
                 CB->>CB: record_failure
-                opt failure_count >= fail_max
-                    CB->>CB: → OPEN; last_failure = now()
+                opt failure_count over fail_max
+                    CB->>CB: transition to OPEN, stamp last_failure
                 end
-                CB->>A: AuditEvent(error_code=..., outcome="error")
+                CB->>A: emit AuditEvent error
                 CB-->>U: raise
             end
         end

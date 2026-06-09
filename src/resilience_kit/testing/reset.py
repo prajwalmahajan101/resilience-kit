@@ -36,3 +36,12 @@ def reset_all_singletons() -> None:
         reset_fernet_cache()
     except ImportError:
         pass
+    # M4 audit + tasks: clear lazily-built dispatchers so cross-test
+    # event-loop reuse does not bind a Queue to a closed loop.
+    from resilience_kit.audit.factory import reset_dispatcher  # noqa: PLC0415
+    from resilience_kit.tasks.queue import reset_tasks  # noqa: PLC0415
+    from resilience_kit.tasks.registry import reset_registry as reset_task_registry  # noqa: PLC0415
+
+    reset_dispatcher()
+    reset_tasks()
+    reset_task_registry()

@@ -49,8 +49,10 @@ class RequestIdMiddleware:
                 correlation id.
         """
         self._app = app
-        self._header = header.lower().encode("latin-1")
-        self._correlation_header = correlation_header.lower().encode("latin-1")
+        self._header_bytes = header.lower().encode("latin-1")
+        self._correlation_header_bytes = correlation_header.lower().encode("latin-1")
+        self._header_str = header.lower()
+        self._correlation_header_str = correlation_header.lower()
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Process one ASGI event.
@@ -64,14 +66,14 @@ class RequestIdMiddleware:
             await self._app(scope, receive, send)
             return
         headers = _headers_dict(scope)
-        rid = headers.get(self._header) or new_request_id()
-        cid = headers.get(self._correlation_header) or rid
+        rid = headers.get(self._header_str) or new_request_id()
+        cid = headers.get(self._correlation_header_str) or rid
 
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
                 merged = list(message.get("headers", []))
-                merged.append((self._header, rid.encode("latin-1")))
-                merged.append((self._correlation_header, cid.encode("latin-1")))
+                merged.append((self._header_bytes, rid.encode("latin-1")))
+                merged.append((self._correlation_header_bytes, cid.encode("latin-1")))
                 message["headers"] = merged
             await send(message)
 
@@ -79,18 +81,19 @@ class RequestIdMiddleware:
             await self._app(scope, receive, send_with_headers)
 
 
-def _headers_dict(scope: Scope) -> dict[bytes, str]:
-    """Return a case-folded ``bytes → str`` view of the request headers.
+def _headers_dict(scope: Scope) -> dict[str, str]:
+    """Return a case-folded ``str → str`` view of the request headers.
 
-    ASGI guarantees header names and values are :class:`bytes` (the spec
-    forbids :class:`bytearray`), but we coerce explicitly with
-    :meth:`bytes.__new__` so static analysers see a hashable key type.
+    ASGI delivers headers as ``(bytes, bytes)`` pairs; we decode both
+    sides to ``str`` here so the dict key is unambiguously hashable
+    (static analysers occasionally flag the bytes-of-bytearray path
+    even though the ASGI spec mandates bytes).
     """
-    out: dict[bytes, str] = {}
+    out: dict[str, str] = {}
     for raw_name, raw_value in scope.get("headers", []):
-        name_bytes: bytes = bytes(raw_name)
-        value_bytes: bytes = bytes(raw_value)
-        out[name_bytes.lower()] = value_bytes.decode("latin-1")
+        name_str = bytes(raw_name).decode("latin-1").lower()
+        value_str = bytes(raw_value).decode("latin-1")
+        out[name_str] = value_str
     return out
 
 

@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from resilience_kit._version import __version__
+from resilience_kit.audit import AuditEvent, log_inbound, log_outbound
 from resilience_kit.decorators import circuit_breaker, resilient
 from resilience_kit.exceptions import (
     DecryptionError,
@@ -36,6 +37,7 @@ from resilience_kit.exceptions import (
     UnknownBackendError,
     ValidationError,
 )
+from resilience_kit.health import HealthAggregate, HealthStatus, health_snapshot
 from resilience_kit.registry import ResilienceRegistry, registry
 from resilience_kit.retry import retry, retry_on_failure
 from resilience_kit.ssrf import (
@@ -85,10 +87,13 @@ def __getattr__(name: str) -> Any:
 
 __all__ = [
     "AsyncAPIClient",
+    "AuditEvent",
     "DecryptionError",
     "ExternalServiceError",
     "ExternalTimeoutError",
     "FernetCipher",
+    "HealthAggregate",
+    "HealthStatus",
     "MissingExtraError",
     "RateLimitError",
     "RepositoryError",
@@ -102,6 +107,9 @@ __all__ = [
     "assert_allowed_url",
     "assert_public_url",
     "circuit_breaker",
+    "health_snapshot",
+    "log_inbound",
+    "log_outbound",
     "pinned",
     "registry",
     "resilient",

@@ -1,0 +1,46 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.6
+          - pydantic-settings>=2.2
+        args: [--config-file=mypy.ini]
+        files: ^src/resilience_kit/
+
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        files: ^src/resilience_kit/
+        additional_dependencies: ["pydocstyle[toml]"]
+
+  - repo: local
+    hooks:
+      - id: import-linter
+        name: import-linter (layered architecture)
+        entry: lint-imports
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

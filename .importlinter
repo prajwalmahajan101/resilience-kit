@@ -1,0 +1,16 @@
+[importlinter]
+root_package = resilience_kit
+include_external_packages = False
+
+# M0 scaffold: at this point the package only contains ``__init__`` and
+# ``_version``. The full layered-architecture contract from LLD §1 (L0–L4)
+# and the no-cross-adapter contract land in M1+ when the corresponding
+# modules ship; see ``docs/LLD.md`` and ``docs/DIRECTORY-TREE.md``.
+#
+# Until then, we assert the only meaningful invariant: there are no
+# import cycles inside the package.
+[importlinter:contract:no-cycles]
+name = No import cycles inside resilience_kit
+type = independence
+modules =
+    resilience_kit

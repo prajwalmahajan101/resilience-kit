@@ -27,3 +27,12 @@ def reset_all_singletons() -> None:
     reset_throttle()
     reset_recovery_state()
     reset_metrics()
+    # The Fernet cipher is behind an optional extra; only reset when the
+    # extra is installed so importing the kit without `[crypto]` still
+    # runs the full reset.
+    try:
+        from resilience_kit.crypto.fernet import reset_fernet_cache  # noqa: PLC0415
+
+        reset_fernet_cache()
+    except ImportError:
+        pass

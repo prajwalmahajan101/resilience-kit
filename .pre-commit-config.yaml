@@ -16,31 +16,66 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff
-        args: [--fix]
+        name: ruff (lint, autofix)
+        args: ["--fix"]
       - id: ruff-format
+        name: ruff (format)
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
     hooks:
       - id: mypy
+        name: mypy --strict (src/)
         additional_dependencies:
           - pydantic>=2.6
           - pydantic-settings>=2.2
-        args: [--config-file=mypy.ini]
+        args: ["--config-file=mypy.ini"]
         files: ^src/resilience_kit/
 
   - repo: https://github.com/PyCQA/pydocstyle
     rev: 6.3.0
     hooks:
       - id: pydocstyle
-        files: ^src/resilience_kit/
+        name: pydocstyle (docstring style)
+        files: ^src/resilience_kit/.*\.py$
         additional_dependencies: ["pydocstyle[toml]"]
+
+  - repo: https://github.com/terrencepreilly/darglint
+    rev: v1.8.1
+    hooks:
+      - id: darglint
+        name: darglint (docstring completeness)
+        args: ["-v", "2"]
+        files: ^src/resilience_kit/.*\.py$
 
   - repo: local
     hooks:
       - id: import-linter
-        name: import-linter (layered architecture)
+        name: import-linter (layered architecture, LLD §1)
         entry: lint-imports
         language: system
         pass_filenames: false
         stages: [pre-push]
+
+      # CVE scan against the lockfile. Manual stage — too slow for
+      # per-commit. Run weekly:
+      #   pre-commit run --hook-stage manual pip-audit
+      - id: pip-audit
+        name: pip-audit (CVE scan of uv.lock)
+        entry: pip-audit --disable-pip
+        language: python
+        additional_dependencies: ["pip-audit==2.7.3"]
+        stages: [manual]
+        pass_filenames: false
+
+      # Run the extras-matrix verifier — installs every declared
+      # extra in a clean venv and imports the package. Manual stage:
+      # slow (creates N venvs), but the only way to catch a broken
+      # extra before release.
+      - id: verify-extras-matrix
+        name: verify pyproject extras install cleanly
+        entry: python scripts/verify_extras_matrix.py
+        language: system
+        stages: [manual]
+        pass_filenames: false
+        files: ^pyproject\.toml$

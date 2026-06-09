@@ -10,8 +10,13 @@ include_external_packages = False
 name = Layered architecture
 type = layers
 layers =
+    resilience_kit.testing.reset
+    resilience_kit.http_client.client
+    resilience_kit.http_client.session
+    resilience_kit.http_client.dns_pin : resilience_kit.http_client.errors : resilience_kit.http_client.auth : resilience_kit.crypto.fernet
+    resilience_kit.ssrf.guard : resilience_kit.ssrf._ipchecks : resilience_kit.crypto.exceptions
     resilience_kit.decorators
-    resilience_kit.registry : resilience_kit.retry.decorator : resilience_kit.testing.reset
+    resilience_kit.registry : resilience_kit.retry.decorator
     resilience_kit.circuit_breaker.provider : resilience_kit.throttle.provider : resilience_kit.cache.provider : resilience_kit.circuit_breaker.memory_impl : resilience_kit.throttle.memory_impl : resilience_kit.cache.memory_impl : resilience_kit.retry.backoff
     resilience_kit.circuit_breaker.base : resilience_kit.throttle.base : resilience_kit.throttle.scopes : resilience_kit.cache.base : resilience_kit.metrics : resilience_kit.testing.fakes
     resilience_kit.exceptions.base : resilience_kit.exceptions.infrastructure : resilience_kit.exceptions.validation : resilience_kit.runtime : resilience_kit.context : resilience_kit.settings

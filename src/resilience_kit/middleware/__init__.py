@@ -8,6 +8,18 @@ mirrors land in M6 alongside the adapter.
 
 from __future__ import annotations
 
+from resilience_kit.middleware.body_limit import BodyLimitMiddleware
 from resilience_kit.middleware.request_id import RequestIdMiddleware
+from resilience_kit.middleware.security_headers import (
+    DEFAULTS as SECURITY_HEADER_DEFAULTS,
+    SecurityHeadersMiddleware,
+)
+from resilience_kit.middleware.selective_cors import SelectiveCorsMiddleware
 
-__all__ = ["RequestIdMiddleware"]
+__all__ = [
+    "SECURITY_HEADER_DEFAULTS",
+    "BodyLimitMiddleware",
+    "RequestIdMiddleware",
+    "SecurityHeadersMiddleware",
+    "SelectiveCorsMiddleware",
+]

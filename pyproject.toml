@@ -70,18 +70,27 @@ all = [
 ]
 
 # Entry-point groups for third-party backend discovery (LLD §3).
-# Each group is currently empty; backends ship in M1+ milestones.
+# Builtins are also published here so the provider chain has one shape
+# everywhere: every name (kit-shipped or third-party) resolves the same way.
 [project.entry-points."resilience_kit.cache_backends"]
+memory = "resilience_kit.cache.memory_impl:InMemoryAsyncCache"
 
 [project.entry-points."resilience_kit.breaker_backends"]
+memory = "resilience_kit.circuit_breaker.memory_impl:InMemoryAsyncBreaker"
 
 [project.entry-points."resilience_kit.throttle_backends"]
+memory = "resilience_kit.throttle.memory_impl:InMemoryAsyncThrottle"
 
 [project.entry-points."resilience_kit.audit_backends"]
+noop = "resilience_kit.audit.backends.noop:NoopAuditBackend"
+stdlib_logging = "resilience_kit.audit.backends.stdlib_logging:StdlibLoggingAuditBackend"
 
 [project.entry-points."resilience_kit.audit_sanitizers"]
+default = "resilience_kit.audit.sanitizers:DefaultRedactor"
 
 [project.entry-points."resilience_kit.metrics_sinks"]
+noop = "resilience_kit.metrics:NoopMetricsSink"
+stdlib_logging = "resilience_kit.metrics:StdlibLoggingMetricsSink"
 
 [project.entry-points."resilience_kit.settings_sources"]
 

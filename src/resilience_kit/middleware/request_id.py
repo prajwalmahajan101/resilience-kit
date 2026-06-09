@@ -80,10 +80,17 @@ class RequestIdMiddleware:
 
 
 def _headers_dict(scope: Scope) -> dict[bytes, str]:
-    """Return a case-folded ``bytes → str`` view of the request headers."""
+    """Return a case-folded ``bytes → str`` view of the request headers.
+
+    ASGI guarantees header names and values are :class:`bytes` (the spec
+    forbids :class:`bytearray`), but we coerce explicitly with
+    :meth:`bytes.__new__` so static analysers see a hashable key type.
+    """
     out: dict[bytes, str] = {}
-    for name, value in scope.get("headers", []):
-        out[bytes(name).lower()] = bytes(value).decode("latin-1")
+    for raw_name, raw_value in scope.get("headers", []):
+        name_bytes: bytes = bytes(raw_name)
+        value_bytes: bytes = bytes(raw_value)
+        out[name_bytes.lower()] = value_bytes.decode("latin-1")
     return out
 
 

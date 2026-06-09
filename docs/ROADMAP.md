@@ -91,7 +91,7 @@ Legend: 🟦 core primitive · 🟩 backend / provider · 🟨 adapter · 🟧 d
 
 ---
 
-## M4 — Audit (api_log) + middleware + metrics + entry-point wiring 🟦🟩
+## M4 — Audit (api_log) + middleware + metrics + entry-point wiring 🟦🟩 ✅ shipped
 
 **Goal.** Observability primitives ship; third-party backends are discoverable.
 

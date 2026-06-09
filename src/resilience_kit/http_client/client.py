@@ -257,20 +257,58 @@ class AsyncAPIClient:
         return response
 
     def _emit_audit(self, call: OutboundCall) -> None:
-        """Hand ``call`` to the audit callback if one is configured.
+        """Hand ``call`` to the configured audit sink.
 
-        Errors raised by the callback are logged and swallowed so the
+        Precedence:
+
+        1. The caller-supplied ``on_outbound`` callback, if any.
+        2. Otherwise, the kit's audit dispatcher
+           (:func:`resilience_kit.audit.get_dispatcher`) receives an
+           :class:`~resilience_kit.audit.AuditEvent` built from the
+           call. The dispatcher is lazy-built from settings so callers
+           who never configure audit see the kit default (noop).
+
+        Errors anywhere in this method are logged and swallowed — the
         observability path can never fail the request.
 
         Args:
             call: The audit record.
         """
-        if self._on_outbound is None:
+        if self._on_outbound is not None:
+            try:
+                self._on_outbound(call)
+            except Exception:
+                logger.exception("on_outbound callback raised; suppressing.")
             return
         try:
-            self._on_outbound(call)
+            self._submit_to_dispatcher(call)
         except Exception:
-            logger.exception("on_outbound callback raised; suppressing.")
+            logger.exception("audit dispatch raised; suppressing.")
+
+    @staticmethod
+    def _submit_to_dispatcher(call: OutboundCall) -> None:
+        """Translate :class:`OutboundCall` → :class:`AuditEvent` and dispatch."""
+        from resilience_kit.audit import AuditEvent, get_dispatcher  # noqa: PLC0415
+        from resilience_kit.context import (  # noqa: PLC0415
+            correlation_id,
+            request_id,
+        )
+
+        event = AuditEvent(
+            direction="outbound",
+            service=call.service,
+            method=call.method,
+            path=call.url,
+            outcome="failure" if call.error_class else "success",
+            latency_ms=call.latency_ms,
+            status=call.status,
+            error_class=call.error_class,
+            error_code=call.error_code,
+            request_id=request_id.get(),
+            correlation_id=correlation_id.get(),
+            details=call.details,
+        )
+        get_dispatcher().submit(event)
 
     # ── Verb shortcuts ────────────────────────────────────────────────
 

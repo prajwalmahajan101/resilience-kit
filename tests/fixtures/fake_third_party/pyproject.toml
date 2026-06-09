@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fake-third-party"
+version = "0.1.0"
+description = "Fixture proving resilience_kit's entry-point discovery chain."
+requires-python = ">=3.11"
+
+[project.entry-points."resilience_kit.cache_backends"]
+fake = "fake_third_party.cache:FakeCache"
+
+[project.entry-points."resilience_kit.audit_backends"]
+fake = "fake_third_party.audit:FakeAuditBackend"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fake_third_party"]

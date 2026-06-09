@@ -111,7 +111,7 @@ design — please don't open a PR to "fix" it.
 
 ---
 
-## M4 — Audit (api_log) + middleware + metrics + entry-point wiring 🟦🟩
+## M4 — Audit (api_log) + middleware + metrics + entry-point wiring 🟦🟩 ✅ shipped
 
 **Goal.** Observability primitives ship; third-party backends are discoverable.
 

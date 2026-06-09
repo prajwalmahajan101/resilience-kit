@@ -9,5 +9,11 @@ from __future__ import annotations
 
 from resilience_kit.audit.backends.base import AuditBackend, AuditEvent
 from resilience_kit.audit.backends.noop import NoopAuditBackend
+from resilience_kit.audit.backends.stdlib_logging import StdlibLoggingAuditBackend
 
-__all__ = ["AuditBackend", "AuditEvent", "NoopAuditBackend"]
+__all__ = [
+    "AuditBackend",
+    "AuditEvent",
+    "NoopAuditBackend",
+    "StdlibLoggingAuditBackend",
+]

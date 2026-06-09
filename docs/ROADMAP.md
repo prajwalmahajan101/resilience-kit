@@ -6,6 +6,26 @@ Legend: 🟦 core primitive · 🟩 backend / provider · 🟨 adapter · 🟧 d
 
 ---
 
+## Tagging convention
+
+Two kinds of tags ship from this repo. They mean different things and the GitHub
+UI should treat them differently.
+
+| Tag pattern | Meaning | GitHub Release? | Installable from PyPI? |
+|---|---|---|---|
+| `milestone/m0` … `milestone/mN` | **Dev checkpoint.** A roadmap milestone passed its exit gate; the next milestone can start against this SHA. Not a user-facing version. | ❌ no | ❌ no |
+| `v0.1.0`, `v0.1.1`, … | **Shippable release.** Trusted-publish to PyPI, GitHub Release with auto-generated notes, README install command points at this. | ✅ yes | ✅ yes |
+
+The first `v*` tag lands at the end of M8 (the v0.1 release gate). Until then,
+every `milestone/m*` is just a "we passed this checkpoint, don't blame the next
+milestone for breaking the previous one" marker — useful for `git bisect`, not
+for end users.
+
+If you see a `milestone/m*` tag without a matching GitHub Release, that's by
+design — please don't open a PR to "fix" it.
+
+---
+
 ## M0 — Repo scaffold 🟧
 
 **Goal.** A green-CI empty package the user can `pip install -e` and import.

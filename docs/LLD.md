@@ -284,7 +284,7 @@ sequenceDiagram
                 CB->>M: timing("call.duration", elapsed_ms)
                 CB-->>U: result
             else retriable exception
-                RT->>RT: sleep(backoff + jitter); attempt++
+                RT->>RT: sleep backoff+jitter, increment attempt
             else non-retriable
                 RT-->>CB: raise
                 CB->>CB: record_failure

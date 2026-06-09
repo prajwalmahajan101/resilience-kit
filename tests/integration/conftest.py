@@ -37,12 +37,13 @@ def redis_container() -> Iterator[object]:
         The running container (so individual tests can stop/start it for
         recovery-monitor exercises).
     """
-    try:
-        from testcontainers.redis import RedisContainer  # noqa: PLC0415
-    except ImportError:
-        pytest.skip("testcontainers[redis] not installed; skipping integration tests")
-
-    container = RedisContainer("redis:7")
+    # ``importorskip`` raises ``Skipped`` (a ``NoReturn`` pytest signal) when
+    # the dep is missing, satisfying static analysis that the symbol is bound.
+    testcontainers_redis = pytest.importorskip(
+        "testcontainers.redis",
+        reason="testcontainers[redis] not installed; skipping integration tests",
+    )
+    container = testcontainers_redis.RedisContainer("redis:7")
     container.start()
     try:
         yield container

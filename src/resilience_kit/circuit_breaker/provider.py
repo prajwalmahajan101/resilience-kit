@@ -13,7 +13,6 @@ is made once on first call; tests / adapters can override via
 from __future__ import annotations
 
 import importlib.util
-import logging
 from typing import TYPE_CHECKING
 
 from resilience_kit._providers import resolve_provider
@@ -26,7 +25,6 @@ if TYPE_CHECKING:
     from resilience_kit.testing.fakes import Clock
 
 
-_logger = logging.getLogger(__name__)
 _ENTRY_POINT_GROUP = "resilience_kit.breaker_backends"
 
 

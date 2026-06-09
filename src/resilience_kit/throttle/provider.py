@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import logging
 from typing import TYPE_CHECKING
 
 from resilience_kit._providers import resolve_provider
@@ -15,7 +14,6 @@ if TYPE_CHECKING:
     from resilience_kit.throttle.base import AsyncThrottle
 
 
-_logger = logging.getLogger(__name__)
 _ENTRY_POINT_GROUP = "resilience_kit.throttle_backends"
 
 

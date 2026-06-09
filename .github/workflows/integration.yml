@@ -1,0 +1,36 @@
+name: Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: integration (${{ matrix.backend.image }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend:
+          - image: "redis:7"
+            name: "redis-7"
+          - image: "valkey/valkey:8"
+            name: "valkey-8"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Install deps
+        run: uv sync --all-extras --group dev --group test-integration --python 3.12
+      - name: Run integration suite
+        env:
+          # Lets the testcontainers fixture pick the right image.
+          RESILIENCE_KIT_TEST_REDIS_IMAGE: ${{ matrix.backend.image }}
+        run: uv run --python 3.12 pytest tests/integration tests/contract -q -m "integration or not integration"

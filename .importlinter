@@ -2,15 +2,16 @@
 root_package = resilience_kit
 include_external_packages = False
 
-# M0 scaffold: at this point the package only contains ``__init__`` and
-# ``_version``. The full layered-architecture contract from LLD §1 (L0–L4)
-# and the no-cross-adapter contract land in M1+ when the corresponding
-# modules ship; see ``docs/LLD.md`` and ``docs/DIRECTORY-TREE.md``.
-#
-# Until then, we assert the only meaningful invariant: there are no
-# import cycles inside the package.
-[importlinter:contract:no-cycles]
-name = No import cycles inside resilience_kit
-type = independence
-modules =
-    resilience_kit
+# Layered architecture from LLD §1, mapped onto M1's concrete modules.
+# Lower layers never import from higher. Same-layer siblings (split by ':')
+# may freely import each other. Modules not named here are unconstrained and
+# will be slotted in as later milestones ship.
+[importlinter:contract:layers]
+name = Layered architecture
+type = layers
+layers =
+    resilience_kit.decorators
+    resilience_kit.registry : resilience_kit.retry.decorator : resilience_kit.testing.reset
+    resilience_kit.circuit_breaker.provider : resilience_kit.throttle.provider : resilience_kit.cache.provider : resilience_kit.circuit_breaker.memory_impl : resilience_kit.throttle.memory_impl : resilience_kit.cache.memory_impl : resilience_kit.retry.backoff
+    resilience_kit.circuit_breaker.base : resilience_kit.throttle.base : resilience_kit.throttle.scopes : resilience_kit.cache.base : resilience_kit.metrics : resilience_kit.testing.fakes
+    resilience_kit.exceptions.base : resilience_kit.exceptions.infrastructure : resilience_kit.exceptions.validation : resilience_kit.runtime : resilience_kit.context : resilience_kit.settings

@@ -8,7 +8,16 @@
 [![CI](https://github.com/prajwalmahajan101/resilience-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/prajwalmahajan101/resilience-kit/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** v0.1 — pre-release. The full design lives in [PRD.md](./docs/PRD.md). APIs marked *locked* in §5.4 of the PRD will not break before 1.0.
+> **Status:** v0.1 — pre-release, no code shipped yet. Design is locked across four docs:
+>
+> | Doc | What it answers |
+> |---|---|
+> | [PRD.md](./docs/PRD.md) | What's in/out of scope, why, who it's for |
+> | [ROADMAP.md](./docs/ROADMAP.md) | Feature-level breakdown per milestone (M0–M8) with exit gates |
+> | [LLD.md](./docs/LLD.md) | Protocols, sequence diagrams, concurrency model, settings schema |
+> | [DIRECTORY-TREE.md](./docs/DIRECTORY-TREE.md) | Every file with arrival milestone and required extra |
+>
+> APIs marked *locked* in PRD §5.4 and LLD §2 will not break before 1.0.
 
 ---
 
@@ -236,7 +245,7 @@ Single `ResilienceSettings` model (pydantic v2). Resolved through `get_settings(
 | `audit.sink` | stdlib logging | importable string, callable, or entry-point name |
 | `audit.redact_fields` | `["password", "token", "secret", "authorization"]` | |
 
-Full reference in [PRD.md §5.5](./docs/PRD.md).
+Full pydantic schema in [LLD.md §10](./docs/LLD.md). Settings keys are loaded with the `RESILIENCE_` prefix and `__` nested delimiter (e.g. `RESILIENCE_DEFAULTS__RETRY__MAX_ATTEMPTS=5`).
 
 ---
 
@@ -291,16 +300,29 @@ async def test_throttle_under_load(redis_url):
 
 ## Roadmap
 
-`v0.1` — everything in this README, both adapters, both boilerplates migrated to depend on it.
-`v0.2+` — Flask adapter · Celery adapter · Litestar adapter · `resilience_kit doctor` CLI · Sphinx site.
+**v0.1** — everything in this README, both adapters, both boilerplates migrated to depend on it. Nine milestones:
 
-Long-form plan and milestone breakdown: [PRD.md](./docs/PRD.md).
+| | Milestone | Status |
+|---|---|---|
+| M0 | Repo scaffold | ⬜ pending |
+| M1 | Core primitives, in-memory only | ⬜ pending |
+| M2 | Redis/Valkey + pybreaker backends | ⬜ pending |
+| M3 | HTTP client + SSRF + crypto | ⬜ pending |
+| M4 | Audit + middleware + metrics + entry-point wiring | ⬜ pending |
+| M5 | FastAPI adapter | ⬜ pending |
+| M6 | Django adapter | ⬜ pending |
+| M7 | Boilerplate migrations | ⬜ pending |
+| M8 | v0.1.0 PyPI release | ⬜ pending |
+
+**v0.2+** — Flask adapter · Celery adapter · Litestar adapter · `resilience_kit doctor` CLI · Sphinx site.
+
+Per-milestone feature list and exit gates: [ROADMAP.md](./docs/ROADMAP.md). Final file tree with arrival milestones per file: [DIRECTORY-TREE.md](./docs/DIRECTORY-TREE.md).
 
 ---
 
 ## Contributing
 
-This is a portfolio project — issues and PRs welcome but I'm the only maintainer. The contract test suite under `tests/contract/` is the source of truth: any new backend must pass it, parametrized in.
+This is a portfolio project — issues and PRs welcome but I'm the only maintainer. The contract test suite under `tests/contract/` is the source of truth: any new backend must pass it, parametrized in. See [LLD.md §12](./docs/LLD.md) for the test strategy and [DIRECTORY-TREE.md](./docs/DIRECTORY-TREE.md) for where new code lands.
 
 ```bash
 uv sync --all-extras --dev

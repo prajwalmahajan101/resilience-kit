@@ -17,3 +17,7 @@ __all__ = [
     "NoopAuditBackend",
     "StdlibLoggingAuditBackend",
 ]
+
+# PostgresAuditBackend is exposed under the `audit-postgres` extra; importing
+# the package without asyncpg installed must not raise. Users access it via
+# `from resilience_kit.audit.backends.postgres import PostgresAuditBackend`.

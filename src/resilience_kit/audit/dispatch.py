@@ -174,8 +174,8 @@ class FireAndForgetDispatcher:
             _BACKEND_BACKOFF_BASE_S * (2 ** (attempt - 1)),
             _BACKEND_BACKOFF_CAP_S,
         )
-        jitter: float = 0.5 + random.random()  # noqa: S311 — backoff jitter, not crypto
-        return base * jitter
+        jitter: float = 0.5 + float(random.random())  # noqa: S311 — backoff jitter, not crypto
+        return float(base * jitter)
 
 
 class InlineDispatcher:

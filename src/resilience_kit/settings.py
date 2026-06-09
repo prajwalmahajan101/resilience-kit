@@ -58,6 +58,18 @@ class CryptoSettings(BaseModel):
     field_encryption_key: SecretStr | None = None
 
 
+class RecoverySettings(BaseModel):
+    """Recovery-monitor settings (LLD §8).
+
+    Production default polls every 10 s with a 3-success stable window;
+    tests inject smaller values via the settings-source indirection.
+    """
+
+    probe_interval_seconds: float = 10.0
+    stable_window_successes: int = 3
+    ping_alias: str = "default"
+
+
 class AuditSettings(BaseModel):
     """Audit (``api_log``) settings — primary impl lands in M4."""
 
@@ -86,6 +98,7 @@ class ResilienceSettings(BaseSettings):
     ssrf: SSRFSettings = Field(default_factory=SSRFSettings)
     crypto: CryptoSettings = Field(default_factory=CryptoSettings)
     audit: AuditSettings = Field(default_factory=AuditSettings)
+    recovery: RecoverySettings = Field(default_factory=RecoverySettings)
 
     model_config = SettingsConfigDict(
         env_prefix="RESILIENCE_",

@@ -9,19 +9,21 @@ from __future__ import annotations
 
 from resilience_kit.cache.provider import reset_cache
 from resilience_kit.metrics import reset_metrics
+from resilience_kit.recovery import reset_recovery_state
 from resilience_kit.registry import reset_registry
 from resilience_kit.runtime import reset_settings_cache
 from resilience_kit.throttle.provider import reset_throttle
 
 
 def reset_all_singletons() -> None:
-    """Reset settings cache, registry, providers, and metrics sink.
+    """Reset settings cache, registry, providers, recovery roster, metrics sink.
 
-    Adds future reset hooks for ``recovery``, ``audit.dispatch``, etc. when
-    those modules ship in M2 / M4.
+    Adds future reset hooks for ``audit.dispatch`` etc. when those
+    modules ship in M4.
     """
     reset_settings_cache()
     reset_registry()
     reset_cache()
     reset_throttle()
+    reset_recovery_state()
     reset_metrics()

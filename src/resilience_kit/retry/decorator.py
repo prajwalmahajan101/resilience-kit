@@ -123,6 +123,11 @@ def retry(  # noqa: PLR0915 — single-function retry loop is easier to audit
                                 tags={"func": func.__name__, "attempt": str(attempt + 1)},
                             )
                         return cast("T", result)
+                    except ServiceUnavailableError:
+                        # The breaker is OPEN. Never retry — even if the
+                        # caller's ``exceptions`` tuple includes a broader
+                        # ancestor like ``Exception``.
+                        raise
                     except safe_exceptions as exc:
                         last_exc = exc
                         if on_error:
@@ -190,6 +195,8 @@ def retry(  # noqa: PLR0915 — single-function retry loop is easier to audit
                             tags={"func": func.__name__, "attempt": str(attempt + 1)},
                         )
                     return result
+                except ServiceUnavailableError:
+                    raise
                 except safe_exceptions as exc:
                     last_exc = exc
                     if on_error:

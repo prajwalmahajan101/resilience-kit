@@ -132,24 +132,68 @@ class StdlibLoggingMetricsSink:
         _logger.debug("metric.gauge name=%s value=%s tags=%s", name, value, tags or {})
 
 
+_METRICS_GROUP = "resilience_kit.metrics_sinks"
+_BUILTIN_SINKS: Mapping[str, type[MetricsSink]] = {
+    "noop": NoopMetricsSink,
+    "stdlib_logging": StdlibLoggingMetricsSink,
+}
+
 _lock = threading.Lock()
-_sink: MetricsSink = NoopMetricsSink()
+_sink: MetricsSink | None = None
 
 
 def get_metrics() -> MetricsSink:
-    """Return the currently-installed metrics sink.
+    """Return the active metrics sink, resolving lazily from settings.
+
+    Resolution order — used the first time a sink is needed, then cached:
+
+    1. Whatever the caller passed to :func:`set_metrics`.
+    2. ``settings.metrics_sink`` resolved through the standard provider
+       chain (explicit instance → importable string → entry point →
+       builtin ``"noop"`` / ``"stdlib_logging"`` → fail).
 
     Returns:
         The active :class:`MetricsSink`.
     """
+    global _sink  # noqa: PLW0603
+    if _sink is not None:
+        return _sink
+    with _lock:
+        if _sink is None:
+            _sink = _resolve_from_settings()
     return _sink
+
+
+def _resolve_from_settings() -> MetricsSink:
+    """Build a sink from ``settings.metrics_sink`` via the provider chain.
+
+    Imported lazily inside the function to avoid a settings ↔ metrics
+    import cycle at module load.
+    """
+    from resilience_kit._providers import resolve_provider  # noqa: PLC0415
+    from resilience_kit.exceptions import UnknownBackendError  # noqa: PLC0415
+    from resilience_kit.runtime import get_settings  # noqa: PLC0415
+
+    name = get_settings().metrics_sink
+    try:
+        return resolve_provider(
+            group=_METRICS_GROUP,
+            name=name,
+            builtins=_BUILTIN_SINKS,
+        )
+    except UnknownBackendError:
+        _logger.warning(
+            "metrics_sink=%r did not resolve; falling back to no-op.",
+            name,
+        )
+        return NoopMetricsSink()
 
 
 def set_metrics(sink: MetricsSink) -> None:
     """Install ``sink`` as the global metrics sink.
 
     Args:
-        sink: New sink instance.
+        sink: New sink instance. Wins over the settings-driven default.
     """
     global _sink  # noqa: PLW0603 — module-level swap is the API
     with _lock:
@@ -157,5 +201,7 @@ def set_metrics(sink: MetricsSink) -> None:
 
 
 def reset_metrics() -> None:
-    """Restore the default no-op sink. Wired into ``testing.reset_all_singletons``."""
-    set_metrics(NoopMetricsSink())
+    """Restore lazy resolution. Wired into ``testing.reset_all_singletons``."""
+    global _sink  # noqa: PLW0603
+    with _lock:
+        _sink = None

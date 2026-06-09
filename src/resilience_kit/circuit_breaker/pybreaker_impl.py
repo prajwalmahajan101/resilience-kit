@@ -1,8 +1,11 @@
 """Async ``AsyncBreaker`` adapter over the synchronous ``pybreaker`` library.
 
-``pybreaker`` ships native async support via ``CircuitBreaker.call_async``
-since 1.0; we delegate directly. Sync upstreams run on the thread executor
-through ``CircuitBreaker.call``.
+``pybreaker`` is sync-first; we wrap it so callers see the kit's async
+protocol. ``pybreaker.CircuitBreaker.calling()`` is a context manager that
+tracks success/failure through the standard contextmanager protocol — it
+works inside ``async def`` as long as the ``with`` block contains the
+``await``. We avoid ``call_async`` because it's a tornado-only API in
+pybreaker 1.x.
 
 ``pybreaker`` is a hard dep of the kit (M0), so this module imports it
 unconditionally — no :class:`MissingExtraError` guard needed.
@@ -11,7 +14,6 @@ unconditionally — no :class:`MissingExtraError` guard needed.
 from __future__ import annotations
 
 import asyncio
-import inspect
 from typing import TYPE_CHECKING, Any, TypeVar
 
 import pybreaker
@@ -89,17 +91,22 @@ class PyBreakerAsyncBreaker:
             ServiceUnavailableError: The breaker is OPEN.
         """
         try:
-            if inspect.iscoroutinefunction(func):
-                result = await self._breaker.call_async(func, *args, **kwargs)  # type: ignore[no-untyped-call]
-            else:
-                # ``pybreaker.call`` is sync; run it on a worker thread so we
-                # don't block the event loop on long-running upstreams.
-                result = await asyncio.to_thread(self._breaker.call, func, *args, **kwargs)
+            with self._breaker.calling():
+                outcome: Any = func(*args, **kwargs)
+                if asyncio.iscoroutine(outcome):
+                    outcome = await outcome
         except pybreaker.CircuitBreakerError as exc:
+            # pybreaker raises CircuitBreakerError both when:
+            #   (a) the breaker was already OPEN — short-circuit, and
+            #   (b) this call tripped the breaker — original exception is
+            #       attached to ``__context__``.
+            # The kit's contract is: propagate the underlying exception
+            # on the tripping call; only subsequent calls short-circuit.
+            if exc.__context__ is not None:
+                raise exc.__context__ from None
             get_metrics().incr("breaker.short_circuit", tags={"service": self.name})
             raise ServiceUnavailableError(self.name) from exc
-        else:
-            return result  # type: ignore[no-any-return]
+        return outcome  # type: ignore[no-any-return]
 
     async def state(self) -> BreakerState:
         """Return the current breaker state.

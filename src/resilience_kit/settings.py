@@ -53,9 +53,16 @@ class SSRFSettings(BaseModel):
 
 
 class CryptoSettings(BaseModel):
-    """Field-level Fernet crypto settings — primary impl lands in M3."""
+    """Field-level Fernet crypto settings (LLD §10).
+
+    ``environment`` gates the "refuse to start without a key" guard. The
+    default ``"prod"`` means a missing ``field_encryption_key`` is a
+    configuration error; ``"dev"`` / ``"test"`` fall back to a static
+    well-known dev key with a one-time warning so local boots work.
+    """
 
     field_encryption_key: SecretStr | None = None
+    environment: Literal["prod", "dev", "test"] = "prod"
 
 
 class RecoverySettings(BaseModel):

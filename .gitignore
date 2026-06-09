@@ -45,3 +45,7 @@ poetry.lock
 
 # Build artefacts
 *.log
+
+# Local Claude Code rules — project-private
+CLAUDE.md
+.claude/

@@ -58,4 +58,6 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --all-extras --group dev --python ${{ matrix.python }}
+      - name: Install fake-third-party fixture (proves entry-point chain)
+        run: uv pip install -e tests/fixtures/fake_third_party --python ${{ matrix.python }}
       - run: uv run --python ${{ matrix.python }} pytest tests -q -m "not integration"

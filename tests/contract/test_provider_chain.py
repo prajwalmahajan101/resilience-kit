@@ -31,26 +31,31 @@ def _is_fixture_installed() -> bool:
 
 @pytest.fixture(scope="module", autouse=True)
 def _install_fixture() -> None:
-    """Ensure the fake-third-party distribution is importable for the test."""
+    """Ensure the fake-third-party distribution is importable for the test.
+
+    CI workflows pre-install the fixture via ``uv pip install -e
+    tests/fixtures/fake_third_party`` before invoking pytest. When run
+    locally without that prep, this fixture installs it on the fly via
+    ``uv`` (falling back to ``python -m pip``); a still-failing install
+    skips the test rather than failing it — the CI matrix is the
+    authoritative gate.
+    """
     if _is_fixture_installed():
         return
     fixture_root = Path(__file__).parent.parent / "fixtures" / "fake_third_party"
-    # ``uv pip install`` works in uv-managed venvs (which lack a stand-alone
-    # ``pip`` module); fall back to ``python -m pip`` when uv is not on PATH.
-    try:
-        subprocess.run(
-            ["uv", "pip", "install", "-e", str(fixture_root)],
-            check=True,
-            capture_output=True,
-        )
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-e", str(fixture_root)],
-            check=True,
-            capture_output=True,
-        )
-    # Refresh importlib metadata cache so entry_points() sees the new dist.
-    importlib.invalidate_caches()
+    for cmd in (
+        ["uv", "pip", "install", "-e", str(fixture_root)],
+        [sys.executable, "-m", "pip", "install", "-e", str(fixture_root)],
+    ):
+        try:
+            subprocess.run(cmd, check=True, capture_output=True)
+            importlib.invalidate_caches()
+            return
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
+    pytest.skip(
+        "Could not install fake_third_party fixture; CI pre-installs it.",
+    )
 
 
 def test_builtin_resolves_first() -> None:

@@ -79,13 +79,17 @@ def get_settings() -> ResilienceSettings:
 
 
 def reset_settings_cache() -> None:
-    """Drop the cached settings so the next ``get_settings()`` rebuilds it.
+    """Drop the cached settings + restore the default :class:`EnvSettingsSource`.
 
-    Wired into :func:`resilience_kit.testing.reset.reset_all_singletons`.
+    Restoring the source matters for tests: an in-process test that swaps
+    in a ``FixedSource`` via :func:`set_settings_source` must not leak that
+    source into the next test. Wired into
+    :func:`resilience_kit.testing.reset.reset_all_singletons`.
     """
-    global _cached  # noqa: PLW0603 — module-level cache reset is the API
+    global _cached, _source  # noqa: PLW0603 — module-level reset is the API
     with _lock:
         _cached = None
+        _source = EnvSettingsSource()
 
 
 def require(value: Any, *, name: str) -> Any:

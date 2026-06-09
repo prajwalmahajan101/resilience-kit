@@ -1,0 +1,54 @@
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[lint]
+select = [
+    "E", "W",      # pycodestyle
+    "F",           # pyflakes
+    "I",           # isort
+    "B",           # bugbear
+    "C4",          # comprehensions
+    "UP",          # pyupgrade
+    "SIM",         # simplify
+    "RUF",         # ruff-specific
+    "TCH",         # type-checking imports
+    "ASYNC",       # async best-practice
+    "PT",          # pytest style
+    "D",           # pydocstyle (lite)
+    "S",           # bandit
+    "A",           # builtins shadowing
+    "N",           # pep8-naming
+    "TID",         # tidy imports
+    "RET",         # return
+    "PIE",         # misc
+    "PL",          # pylint subset
+    "PERF",        # perf
+    "FBT",         # boolean-trap
+    "ERA",         # eradicate
+]
+ignore = [
+    "D104",        # missing docstring in __init__
+    "D107",        # missing docstring in __init__
+    "D203", "D213",
+    "PLR0913",     # too many args — kit decorators legitimately take many
+    "PLR2004",     # magic value in tests
+    "S101",        # assert in tests
+    "FBT001", "FBT002",  # boolean positional args — pydantic models use them
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["D", "S", "PLR2004", "ANN", "PT011"]
+"scripts/**" = ["T20", "S"]
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.isort]
+known-first-party = ["resilience_kit"]
+combine-as-imports = true
+
+[format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true

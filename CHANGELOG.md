@@ -4,6 +4,10 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-11
+
+First public stable release. Pinned by both reference boilerplates (`fastapi_boilerplate`, `django_boilerplate`) post-M7 migration. Builds on `0.1.0rc1` with the §3.1 pre-cut ergonomics bundle (D1 helpers A–E) that closes every M7 dogfooding finding flagged as high-severity. Surface is additive — `rc1` users upgrade with a pin bump unless they hit the blocker recipes documented in [`docs/MIGRATION-rc1-to-v0.1.0.md`](./docs/MIGRATION-rc1-to-v0.1.0.md).
+
 ### Added
 
 - `.github/workflows/release.yml` — tag-driven release pipeline. Pushing a `v*` tag triggers: tag↔`_version.py` consistency check, `uv build` of sdist + wheel, `twine check --strict`, a smoke-import of the built wheel in a clean venv, PyPI publish via Trusted Publishing (no token in secrets), and a GitHub Release with notes extracted from this CHANGELOG. Pre-release tags (`*rc*` / `*a*` / `*b*` / `*dev*`) get the GitHub `--prerelease` flag automatically. **Requires a one-time PyPI Trusted Publisher configuration** at <https://pypi.org/manage/account/publishing/> (repo `prajwalmahajan101/resilience-kit`, workflow `release.yml`, environment `pypi`).
@@ -124,5 +128,6 @@ First public release candidate. Cut to PyPI as a packaging smoke-test before the
   - Activated full layered-architecture contract in `.importlinter`.
 - M0: repo scaffold — `pyproject.toml` with extras matrix, source layout with `py.typed`, ruff + mypy + import-linter + pydocstyle + darglint configs, pre-commit, GitHub Actions CI (lint / types / imports / tests on Python 3.11–3.13), CodeQL workflow, PR template, CODEOWNERS, dependabot, issue templates, smoke test.
 
-[Unreleased]: https://github.com/prajwalmahajan101/resilience-kit/compare/v0.1.0rc1...HEAD
+[Unreleased]: https://github.com/prajwalmahajan101/resilience-kit/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/prajwalmahajan101/resilience-kit/compare/v0.1.0rc1...v0.1.0
 [0.1.0rc1]: https://github.com/prajwalmahajan101/resilience-kit/releases/tag/v0.1.0rc1

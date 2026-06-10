@@ -4,7 +4,13 @@ All notable changes to `prajwal-resilience-kit` are documented here. Format: [Ke
 
 ## [Unreleased]
 
+## [0.1.0rc1] - 2026-06-10
+
+First public release candidate. Cut to PyPI as a packaging smoke-test before the M7 boilerplate migration. Pre-release per [PEP 440](https://peps.python.org/pep-0440/) — `pip` will not install it without an explicit version pin or `--pre`. The 0.1.0 final ships at M8b after both boilerplates depend on the kit.
+
 ### Added
+
+- Top-level re-exports of `http_status_for` and `HTTP_STATUS_MAP` (the LLD §11 exception↔HTTP mapping). Adapters and callers no longer need to reach into `resilience_kit.exceptions` for the locked-contract status table.
 
 <!-- m5-placeholder: feat/m5-fastapi-adapter replaces this line -->
 - M5: FastAPI adapter (`resilience_kit.adapters.fastapi`).
@@ -91,4 +97,5 @@ All notable changes to `prajwal-resilience-kit` are documented here. Format: [Ke
   - Activated full layered-architecture contract in `.importlinter`.
 - M0: repo scaffold — `pyproject.toml` with extras matrix, source layout with `py.typed`, ruff + mypy + import-linter + pydocstyle + darglint configs, pre-commit, GitHub Actions CI (lint / types / imports / tests on Python 3.11–3.13), CodeQL workflow, PR template, CODEOWNERS, dependabot, issue templates, smoke test.
 
-[Unreleased]: https://github.com/prajwalmahajan101/resilience-kit/compare/...HEAD
+[Unreleased]: https://github.com/prajwalmahajan101/resilience-kit/compare/v0.1.0rc1...HEAD
+[0.1.0rc1]: https://github.com/prajwalmahajan101/resilience-kit/releases/tag/v0.1.0rc1

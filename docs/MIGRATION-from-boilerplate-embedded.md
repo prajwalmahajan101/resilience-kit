@@ -501,7 +501,16 @@ Audit every env file (`.env`, `.env.staging`, `.env.production`, `helm/values-*.
 
 ## 11. After both PRs merge
 
+> **Next step after this doc:** once the boilerplate→kit port from §1–§10 is
+> in, the rc1→v0.1.0 upgrade — including the §10.1–§10.5 footguns the M7
+> dogfood surfaced and the helpers that close them — is documented in
+> [`MIGRATION-rc1-to-v0.1.0.md`](./MIGRATION-rc1-to-v0.1.0.md). That doc is
+> where the **recipes** live (one snippet per blocker); this §10 is where
+> the **mechanics** live. Use them together.
+
 1. Tag `milestone/m7` on the kit's `main` (dev checkpoint).
 2. Proceed to M8: version bump, CHANGELOG, PyPI publish, GitHub release.
 3. Open follow-up PRs to re-pin each boilerplate from `git+ssh://…@milestone/m7-rc1`
-   to `resilience-kit==0.1.0`.
+   to `resilience-kit==0.1.0`. Apply the relevant blocker recipes from
+   [`MIGRATION-rc1-to-v0.1.0.md` §3](./MIGRATION-rc1-to-v0.1.0.md#3-blocker--helper-recipes)
+   and file the §5 migration report.

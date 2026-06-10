@@ -47,6 +47,8 @@ pip install "resilience-kit[django,redis,http]==0.1.0rc1"   # Django app on Valk
 pip install "resilience-kit[all]==0.1.0rc1"                 # everything
 ```
 
+> Upgrading from `0.1.0rc1`? See [`docs/MIGRATION-rc1-to-v0.1.0.md`](./docs/MIGRATION-rc1-to-v0.1.0.md) — quick-path pin bump plus the helper recipes that remove the M7 dogfooding blockers (`request_id` ContextVar bridging, single-envelope exception handling, legacy env-var translation, exception-bridge contract test).
+
 ### Available extras
 
 | Extra | Enables |

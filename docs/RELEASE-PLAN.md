@@ -284,7 +284,7 @@ After the workflow finishes:
 - [ ] GitHub Release `v0.1.0` exists, **not** marked pre-release, with CHANGELOG-extracted notes and `dist/*` attached.
 - [ ] `pip install resilience-kit` (no version pin) on a clean venv installs `0.1.0` and `import resilience_kit; print(rk.__version__)` prints `0.1.0`.
 - [ ] README install commands flip away from the `==0.1.0rc1` pin.
-- [ ] Open follow-up PRs in both boilerplates to re-pin from `==0.1.0rc1` → `==0.1.0`.
+- [ ] Open follow-up PRs in both boilerplates to re-pin from `==0.1.0rc1` → `==0.1.0`, applying the relevant recipes from [`MIGRATION-rc1-to-v0.1.0.md` §3](./MIGRATION-rc1-to-v0.1.0.md#3-blocker--helper-recipes) and filing the §5 migration report.
 
 ---
 
@@ -663,7 +663,8 @@ context survives the conversation.
 | 2026-06-10 | Refresh ROADMAP "Beyond v0.1" with dogfooding-derived version slots | User: "for all the defer add the version plan feature documentation" |
 | 2026-06-10 | Plan and document the pre-cut helpers + v0.1.x / v0.2 / v0.3 tasks (this doc); **do not execute** | User: "dont do anythong now plan for it and document all the changes that are need and the task that we to complete also the plan what will go in which release" |
 | 2026-06-11 | Approved §3.1 pre-cut helpers A–E in v0.1.0 (full bundle, additive only) | User: "we have D1 ... If approved → open feat/m8b-pre-cut-ergonomics and execute." |
-| 2026-06-11 | Landed `feat/m8b-pre-cut-ergonomics` — `bind_to`, `reset_all_singletons_async`, `verify_envelope_contract`, `from_exception` (+adapter refactor), `legacy_env_alias` | This branch / commits e877a88..3b3238d |
+| 2026-06-11 | Landed `feat/m8b-pre-cut-ergonomics` — `bind_to`, `reset_all_singletons_async`, `verify_envelope_contract`, `from_exception` (+adapter refactor), `legacy_env_alias` | This branch / commits e877a88..3b3238d (PR #22 merged at 2cc554c) |
+| 2026-06-11 | Wrote rc1→v0.1.0 upgrade doc + standardized migration report template | [`docs/MIGRATION-rc1-to-v0.1.0.md`](./MIGRATION-rc1-to-v0.1.0.md) — sink for adopter feedback into v0.1.x / v0.2 ROADMAP |
 
 ---
 

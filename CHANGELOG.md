@@ -7,7 +7,17 @@ All notable changes to `prajwal-resilience-kit` are documented here. Format: [Ke
 ### Added
 
 <!-- m5-placeholder: feat/m5-fastapi-adapter replaces this line -->
-- M5: FastAPI adapter — _pending; filled by `feat/m5-fastapi-adapter`._
+- M5: FastAPI adapter (`resilience_kit.adapters.fastapi`).
+  - `resilience_lifespan(inner=None)` — factory returning a FastAPI lifespan that starts `recovery.monitor` on enter and drains the audit dispatcher + stops the monitor on exit. Composes with an optional inner lifespan.
+  - `install_health_routes(app)` — mounts `GET /healthz` (always 200) and `GET /readyz` (reads `health_snapshot`, propagates 200 / 503). Excluded from the OpenAPI schema.
+  - `install_exception_handlers(app)` — maps every `ResilienceKitError` to the LLD §11 envelope via `exceptions.http_status_for`; `RateLimitError` gets a dedicated handler so the 429 response carries `Retry-After` + `X-RateLimit-*` headers without an extra branch.
+  - `install_middleware_stack(app, **opts)` — mounts the kit's six ASGI middleware in the LLD §11 outer→inner order. `SelectiveCorsMiddleware` is only added when both `cors_allow_origins` and `cors_path_prefixes` are passed so apps that handle CORS upstream are never double-wrapped.
+  - `rate_limit(scope, rate, *, attr_from_request=None)` — FastAPI dependency factory backed by `throttle.provider.get_throttle`. Parses the rate spec once at build time; raises `RateLimitError` on deny.
+  - `request_id_dep()` — returns the active `request_id` ContextVar.
+  - `EncryptedString` — SQLAlchemy 2.x `TypeDecorator[str]` over `FernetCipher`; `cache_ok = True`. None passes through.
+  - `[fastapi]` extra now pulls `sqlalchemy>=2.0` and `httpx>=0.27,<0.29` so a single `pip install prajwal-resilience-kit[fastapi]` wires the whole adapter.
+  - `tests/integration/fastapi_app/` — minimal example + e2e suite against `testcontainers[postgresql]`. Asserts the M5 exit gate: health routes serve 200, 3rd `/limited` returns 429 with `Retry-After`, `EncryptedString` round-trips (Fernet token on disk, plaintext through the ORM), `AsyncAPIClient` reaches a fake upstream via injected transport.
+  - ADR 0010 (FastAPI adapter shape).
 <!-- m6-placeholder: feat/m6-django-adapter replaces this line -->
 - M6: Django adapter — _pending; filled by `feat/m6-django-adapter`._
 

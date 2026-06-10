@@ -7,6 +7,7 @@ hold business logic; if an adapter file grows past ~300 LOC the
 underlying primitive is wrong, not the adapter.
 
 Sub-packages are extras-gated: importing
-``resilience_kit.adapters.fastapi`` without the ``[fastapi]`` extra
-raises :class:`~resilience_kit.exceptions.MissingExtraError`.
+``resilience_kit.adapters.fastapi`` (or ``resilience_kit.adapters.django``)
+without the corresponding extra installed raises
+:class:`~resilience_kit.exceptions.MissingExtraError`.
 """

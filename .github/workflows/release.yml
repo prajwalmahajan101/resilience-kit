@@ -1,0 +1,151 @@
+name: release
+
+# Tag-driven release pipeline:
+#
+#   git tag v0.1.0   →   build sdist + wheel   →   PyPI (trusted publishing)
+#                                              →   GitHub Release
+#
+# Trusted Publishing requires a one-time PyPI configuration at:
+#   https://pypi.org/manage/account/publishing/
+#
+# Owner:        prajwalmahajan101
+# Repository:   resilience-kit
+# Workflow:     release.yml
+# Environment:  pypi      (matches `environment:` below)
+#
+# No API token needs to live in GitHub secrets — OIDC handles auth.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist and wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history so tag → version match works on rebased tags
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Sanity-check tag matches _version.py
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version=$(python -c "import pathlib, re; \
+            t=pathlib.Path('src/resilience_kit/_version.py').read_text(); \
+            m=re.search(r'__version__\\s*=\\s*\"([^\"]+)\"', t); \
+            print(m.group(1))")
+          echo "Tag:        $tag_version"
+          echo "_version:   $pkg_version"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Tag $tag_version does not match src/resilience_kit/_version.py ($pkg_version). Bump _version.py before tagging."
+            exit 1
+          fi
+
+      - name: Build sdist and wheel with uv
+        run: uv build
+
+      - name: Check distributions with twine
+        run: |
+          uv tool install twine
+          uv tool run twine check --strict dist/*
+
+      - name: Smoke import the built wheel
+        # Install the wheel into a clean venv and confirm the top-level
+        # import surface works without optional extras. Catches packaging
+        # mistakes that build + twine check miss (missing py.typed marker,
+        # missing __init__.py in a subpackage, broken entry-point string).
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --upgrade pip
+          /tmp/smoke/bin/pip install dist/*.whl
+          /tmp/smoke/bin/python -c "import resilience_kit as rk; \
+            print('version:', rk.__version__); \
+            from resilience_kit import resilient, registry, http_status_for, HTTP_STATUS_MAP; \
+            assert callable(resilient); \
+            assert isinstance(HTTP_STATUS_MAP, dict); \
+            print('top-level imports OK')"
+
+      - name: Upload distributions as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/resilience-kit/
+    permissions:
+      id-token: write  # OIDC trusted publishing — replaces PYPI_API_TOKEN
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No `with: password:` — Trusted Publishing handles auth via OIDC.
+        # See https://docs.pypi.org/trusted-publishers/
+
+  github-release:
+    name: Create GitHub release
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v6
+
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub release with attached artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          # Extract the version's section from CHANGELOG.md if present;
+          # fall back to an auto-generated note line otherwise.
+          notes_file=$(mktemp)
+          if [ -f CHANGELOG.md ]; then
+            awk -v version="${tag#v}" '
+              $0 ~ "^## \\[" version "\\]" { capture=1; print; next }
+              capture && /^## \[/ { exit }
+              capture { print }
+            ' CHANGELOG.md > "$notes_file"
+          fi
+          if [ ! -s "$notes_file" ]; then
+            echo "Release $tag" > "$notes_file"
+          fi
+          # Mark pre-releases (rc / a / b / dev tags) so they don't displace
+          # the "Latest" release on GitHub.
+          prerelease_flag=""
+          case "$tag" in
+            *rc*|*a*|*b*|*dev*) prerelease_flag="--prerelease" ;;
+          esac
+          gh release create "$tag" \
+            --title "$tag" \
+            --notes-file "$notes_file" \
+            $prerelease_flag \
+            dist/*

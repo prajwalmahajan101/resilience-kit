@@ -4,6 +4,10 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- `.github/workflows/release.yml` — tag-driven release pipeline. Pushing a `v*` tag triggers: tag↔`_version.py` consistency check, `uv build` of sdist + wheel, `twine check --strict`, a smoke-import of the built wheel in a clean venv, PyPI publish via Trusted Publishing (no token in secrets), and a GitHub Release with notes extracted from this CHANGELOG. Pre-release tags (`*rc*` / `*a*` / `*b*` / `*dev*`) get the GitHub `--prerelease` flag automatically. **Requires a one-time PyPI Trusted Publisher configuration** at <https://pypi.org/manage/account/publishing/> (repo `prajwalmahajan101/resilience-kit`, workflow `release.yml`, environment `pypi`).
+
 ### Changed (breaking inside 0.1.x)
 
 - `ResilienceSettings` now uses `extra="forbid"` at the model root: unknown top-level keys in dict-shaped inputs (Django `settings.RESILIENCE = {...}`, programmatic `model_validate(...)`, JSON configs) raise `pydantic.ValidationError` instead of being silently dropped. Catches the legacy-key footgun (`CIRCUIT_BREAKER_CONFIG`, `RATE_LIMIT_CONFIG`, `FIELD_ENCRYPTION_KEY`) that the M7 boilerplate migration was about to import verbatim. Strictness on unknown `RESILIENCE_*` env vars is **not** included — pydantic-settings filters them at the source layer; tracked as a follow-up.

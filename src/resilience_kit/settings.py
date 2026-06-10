@@ -110,5 +110,16 @@ class ResilienceSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="RESILIENCE_",
         env_nested_delimiter="__",
-        extra="ignore",
+        # Fail loud on unknown top-level keys in dict-shaped inputs
+        # (Django settings.RESILIENCE = {...}, programmatic
+        # model_validate(...), JSON config files). Typos such as
+        # "CIRCUIT_BREAKER_CONFIG" or "deafults" now raise ValidationError
+        # instead of being silently dropped.
+        #
+        # NOTE: pydantic-settings filters unknown RESILIENCE_*-prefixed
+        # env vars at the EnvSettingsSource layer — they never reach the
+        # model, so extra="forbid" does not catch env-var typos. Tracked
+        # as a follow-up; the dict-level fix still resolves the Django
+        # adapter path that bites first in practice.
+        extra="forbid",
     )

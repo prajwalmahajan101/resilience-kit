@@ -68,7 +68,7 @@ report flagged the gap), and **breaking risk** (additive vs API
 change). Items that score cheap + high-impact + non-breaking move into
 v0.1.0.
 
-### 3.1 ✅ Recommend landing pre-0.1.0
+### 3.1 ✅ Landed pre-0.1.0 (D1 approved 2026-06-11)
 
 | # | Item | Cost | Why pre-cut | Origin |
 |---|---|---|---|---|
@@ -662,8 +662,8 @@ context survives the conversation.
 | 2026-06-10 | Ship `release.yml` with PyPI Trusted Publishing (no API token in secrets) | Section D of M8b brief |
 | 2026-06-10 | Refresh ROADMAP "Beyond v0.1" with dogfooding-derived version slots | User: "for all the defer add the version plan feature documentation" |
 | 2026-06-10 | Plan and document the pre-cut helpers + v0.1.x / v0.2 / v0.3 tasks (this doc); **do not execute** | User: "dont do anythong now plan for it and document all the changes that are need and the task that we to complete also the plan what will go in which release" |
-| TBD | Approve execution of §3.1 pre-cut helpers (A-E) before v0.1.0 cut? | Awaiting decision |
-| TBD | Approve `feat/m8b-pre-cut-ergonomics` branch? | Awaiting decision |
+| 2026-06-11 | Approved §3.1 pre-cut helpers A–E in v0.1.0 (full bundle, additive only) | User: "we have D1 ... If approved → open feat/m8b-pre-cut-ergonomics and execute." |
+| 2026-06-11 | Landed `feat/m8b-pre-cut-ergonomics` — `bind_to`, `reset_all_singletons_async`, `verify_envelope_contract`, `from_exception` (+adapter refactor), `legacy_env_alias` | This branch / commits e877a88..3b3238d |
 
 ---
 

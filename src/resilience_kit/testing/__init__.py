@@ -1,9 +1,11 @@
-"""Testing helpers — fakes and singleton-reset.
+"""Testing helpers — fakes, singleton-reset, contract verification.
 
 Public surface: :class:`Clock`, :class:`SystemClock`, :class:`FakeClock`,
-:class:`FakeAuditSink`, :func:`reset_all_singletons`.
+:class:`FakeAuditSink`, :func:`reset_all_singletons`,
+:func:`reset_all_singletons_async`, :func:`verify_envelope_contract`,
+:data:`DEFAULT_KIT_EXCEPTIONS`.
 
-``reset_all_singletons`` is imported lazily to break the circular dependency
+The reset helpers are imported lazily to break the circular dependency
 between the testing package and the primitives that themselves use
 :class:`FakeClock` in test contexts.
 """
@@ -12,6 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from resilience_kit.testing.contract import DEFAULT_KIT_EXCEPTIONS, verify_envelope_contract
 from resilience_kit.testing.fakes import (
     Clock,
     FakeAuditSink,
@@ -20,7 +23,10 @@ from resilience_kit.testing.fakes import (
 )
 
 if TYPE_CHECKING:
-    from resilience_kit.testing.reset import reset_all_singletons
+    from resilience_kit.testing.reset import (
+        reset_all_singletons,
+        reset_all_singletons_async,
+    )
 
 
 def __getattr__(name: str) -> Any:
@@ -35,19 +41,20 @@ def __getattr__(name: str) -> Any:
     Raises:
         AttributeError: ``name`` is not a known lazy export.
     """
-    if name == "reset_all_singletons":
-        from resilience_kit.testing.reset import (  # noqa: PLC0415 — lazy import breaks an init-time cycle
-            reset_all_singletons as fn,
-        )
+    if name in ("reset_all_singletons", "reset_all_singletons_async"):
+        from resilience_kit.testing import reset  # noqa: PLC0415
 
-        return fn
+        return getattr(reset, name)
     raise AttributeError(f"module 'resilience_kit.testing' has no attribute {name!r}")
 
 
 __all__ = [
+    "DEFAULT_KIT_EXCEPTIONS",
     "Clock",
     "FakeAuditSink",
     "FakeClock",
     "SystemClock",
     "reset_all_singletons",
+    "reset_all_singletons_async",
+    "verify_envelope_contract",
 ]

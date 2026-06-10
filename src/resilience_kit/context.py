@@ -60,3 +60,31 @@ def bind(
     finally:
         for var, token in reversed(tokens):
             var.reset(token)
+
+
+@contextmanager
+def bind_to(target: ContextVar[str | None]) -> Iterator[None]:
+    """Mirror :data:`request_id` into ``target`` for the duration of the block.
+
+    Lets a consumer's own ContextVar (e.g. a boilerplate's
+    ``core.context.request_id_ctx``) receive whatever the kit's middleware
+    seeded, so the consumer's logging / observability stack reads the same id
+    without rewriting their own context layer.
+
+    If ``target`` is :data:`request_id` itself, this is a no-op.
+
+    Args:
+        target: A ContextVar the caller owns and wants populated with the
+            current kit ``request_id`` value inside the block.
+
+    Yields:
+        Nothing — used purely for its side effect on ``target``.
+    """
+    if target is request_id:
+        yield
+        return
+    token = target.set(request_id.get())
+    try:
+        yield
+    finally:
+        target.reset(token)

@@ -1,4 +1,4 @@
-"""``prajwal-resilience-kit`` — framework-agnostic Python resilience kernel.
+"""``resilience-kit`` — framework-agnostic Python resilience kernel.
 
 Public surface:
 

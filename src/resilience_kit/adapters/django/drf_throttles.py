@@ -35,7 +35,7 @@ from resilience_kit.throttle.scopes import Scope, build_key
 try:
     from rest_framework.throttling import BaseThrottle
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("django", "prajwal-resilience-kit[django]") from exc
+    raise MissingExtraError("django", "resilience-kit[django]") from exc
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

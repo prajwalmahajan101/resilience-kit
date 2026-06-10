@@ -1,4 +1,4 @@
-# Directory tree — `prajwal-resilience-kit` v0.1
+# Directory tree — `resilience-kit` v0.1
 
 Final shape of the repo at v0.1.0 release. Items marked `[Mx]` arrive in that milestone (see [ROADMAP.md](./ROADMAP.md)). Items marked `(extra)` only get installed when the matching pip extra is requested.
 

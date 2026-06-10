@@ -24,7 +24,7 @@ from resilience_kit.exceptions import MissingExtraError
 try:
     from sqlalchemy import String, TypeDecorator
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("fastapi", "prajwal-resilience-kit[fastapi]") from exc
+    raise MissingExtraError("fastapi", "resilience-kit[fastapi]") from exc
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.interfaces import Dialect

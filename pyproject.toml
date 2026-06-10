@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "prajwal-resilience-kit"
+name = "resilience-kit"
 dynamic = ["version"]
 description = "Framework-agnostic Python resilience + core-infrastructure kernel — retries, circuit breakers, throttles, cache, SSRF guard, DNS-pinned HTTP client, audit decorators, field crypto. Pluggable backends. Adapters for Django + FastAPI."
 readme = "README.md"

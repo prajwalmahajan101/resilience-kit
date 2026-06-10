@@ -1,4 +1,4 @@
-# PRD — `prajwal-resilience-kit`
+# PRD — `resilience-kit`
 
 > Framework-agnostic, **modular**, **pluggable** Python resilience + core-infrastructure kernel. Extracted from `prajwalmahajan101/django_boilerplate` and `prajwalmahajan101/fastapi_boilerplate` to end the dual-write of the same primitives across two starter repos. Every module ships independently installable; every backend is a swappable provider discovered via entry points.
 
@@ -6,7 +6,7 @@
 |---|---|
 | **Owner** | Prajwal Mahajan |
 | **Status** | Draft v0.1 — pre-implementation |
-| **Target release** | PyPI `prajwal-resilience-kit` v0.1.0 |
+| **Target release** | PyPI `resilience-kit` v0.1.0 |
 | **Effort** | 2–3 weekends |
 | **License** | MIT (proposed) |
 
@@ -58,7 +58,7 @@ The extraction is **wider than the original one-pager scoped** — but the IN li
 2. **Same public API in both apps.** A user who learns `@resilient("partner_api")` in FastAPI sees the identical decorator in Django.
 3. **Async-first core with sync escape hatches.** Each primitive ships the async API as primary; sync wrappers exist where the primitive is idiomatically sync (Django middleware, Celery tasks).
 4. **Migrate both boilerplates to depend on the package.** Embedded `core/resilience/` directories are deleted in the same release cycle; the kit becomes the source of truth.
-5. **Ship to PyPI.** `pip install prajwal-resilience-kit`, type stubs in-tree, `mypy --strict` clean.
+5. **Ship to PyPI.** `pip install resilience-kit`, type stubs in-tree, `mypy --strict` clean.
 
 ## 3. Non-goals
 
@@ -72,7 +72,7 @@ The extraction is **wider than the original one-pager scoped** — but the IN li
 
 ## 4. Users & use cases
 
-- **Me, on `repay_sync` / `beacon` / future backend repos.** `pip install prajwal-resilience-kit[fastapi]`, set five env vars, get production-grade resilience without copying boilerplate.
+- **Me, on `repay_sync` / `beacon` / future backend repos.** `pip install resilience-kit[fastapi]`, set five env vars, get production-grade resilience without copying boilerplate.
 - **Anyone reading the boilerplates as portfolio.** They land on a real PyPI package with its own README, tests, and CI badge — not yet-another `core/resilience/` folder.
 - **Future me writing a Hashnode post.** *"Circuit-breaker placement is different in async than sync — here's why."* The DNS-pinned httpx transport is the second post.
 
@@ -93,7 +93,7 @@ The extraction is **wider than the original one-pager scoped** — but the IN li
 
 ### 5.1 Package layout — modular, single-distribution + extras
 
-Distributed as **one PyPI package** (`prajwal-resilience-kit`) with extras, not a forest of micro-packages. One package is simpler to release, version, and depend on; modularity is enforced by **import discipline** (each module's hard deps are pure-Python; backends and adapters require extras) and by **entry-point provider discovery** (see §5.3).
+Distributed as **one PyPI package** (`resilience-kit`) with extras, not a forest of micro-packages. One package is simpler to release, version, and depend on; modularity is enforced by **import discipline** (each module's hard deps are pure-Python; backends and adapters require extras) and by **entry-point provider discovery** (see §5.3).
 
 If the surface grows past ~10k LOC or a single backend gains an unrelated heavy dep, we can split into namespace packages later without breaking the public API.
 
@@ -227,7 +227,7 @@ Three mechanisms, used in this order of preference:
 | `[all]` | everything above | — |
 | `[dev]` | testcontainers, pytest-asyncio, mypy, ruff, … | development |
 
-Importing a backend whose extra is not installed raises a clear `MissingExtraError("install prajwal-resilience-kit[redis]")` at import time — never a confusing `ModuleNotFoundError` deep in a stack trace.
+Importing a backend whose extra is not installed raises a clear `MissingExtraError("install resilience-kit[redis]")` at import time — never a confusing `ModuleNotFoundError` deep in a stack trace.
 
 **(b) Protocol-based providers.** Every swappable subsystem is a `typing.Protocol` plus a `provider.py` that returns the configured implementation. Callers depend on the protocol, never on a concrete class.
 
@@ -361,14 +361,14 @@ Also out of scope for v0.1:
 
 A v0.1 release ships when **all** of the following are true:
 
-- [ ] Package published to PyPI as `prajwal-resilience-kit==0.1.0` with the full extras matrix from §5.3 (`[redis]`, `[pybreaker]`, `[http]`, `[requests]`, `[crypto]`, `[audit-postgres]`, `[django]`, `[fastapi]`, `[all]`, `[dev]`).
+- [ ] Package published to PyPI as `resilience-kit==0.1.0` with the full extras matrix from §5.3 (`[redis]`, `[pybreaker]`, `[http]`, `[requests]`, `[crypto]`, `[audit-postgres]`, `[django]`, `[fastapi]`, `[all]`, `[dev]`).
 - [ ] Importing a backend whose extra is missing raises `MissingExtraError` with the exact `pip install` hint — covered by a test.
 - [ ] All 7 swappable subsystems (cache, breaker, throttle, audit, sanitizer, metrics, settings-source) resolve providers via the protocol → explicit → settings-string → entry-point → builtin chain — covered by tests with a fake third-party entry point.
 - [ ] `mypy --strict` clean. `ruff check` + `ruff format` clean. `pydocstyle` + `darglint` pass on all public modules.
 - [ ] **Single contract test suite** under `tests/contract/` runs against the in-memory, redis, and (where applicable) pybreaker backends and passes for all three. Same file, three parametrize ids.
 - [ ] **Adapter integration tests**: one Django app + one FastAPI app under `tests/integration/` each install the kit, exercise `@resilient`, `@log_outbound`, and the rate-limit throttle, and assert behaviour end-to-end against `testcontainers-redis`.
-- [ ] `django_boilerplate` PR opened: `apps/core/resilience/` + `apps/core/utils/crypto.py` removed; depends on `prajwal-resilience-kit[django,redis]`; all existing tests still pass.
-- [ ] `fastapi_boilerplate` PR opened: `src/core/resilience/` + `src/core/utils/{ssrf,crypto}.py` removed; depends on `prajwal-resilience-kit[fastapi,redis]`; all existing tests still pass.
+- [ ] `django_boilerplate` PR opened: `apps/core/resilience/` + `apps/core/utils/crypto.py` removed; depends on `resilience-kit[django,redis]`; all existing tests still pass.
+- [ ] `fastapi_boilerplate` PR opened: `src/core/resilience/` + `src/core/utils/{ssrf,crypto}.py` removed; depends on `resilience-kit[fastapi,redis]`; all existing tests still pass.
 - [ ] README covers: install, five-minute quickstart per framework, full config reference, the four exceptions callers might catch, and a worked example of `@resilient` + `@log_outbound` around an httpx call.
 - [ ] One Hashnode post drafted: *"Circuit-breaker placement is different in async than sync — here's why."* Linked from README.
 - [ ] GitHub Actions: lint + types + tests on Python 3.11, 3.12, 3.13 against in-memory backend; redis job on 3.12 only.
@@ -400,7 +400,7 @@ A v0.1 release ships when **all** of the following are true:
 | **Sync-in-async re-entry breaks Django callers** | Medium | High | Adapters never call async kit primitives directly in sync paths. Django uses sync breaker/retry shims that internally drive a private event loop only when a backend requires it. Document the rule in `docs/sync-vs-async.md`. |
 | **Boilerplate users on older versions can't upgrade** | Low | Low | Boilerplates already pin everything; coordinate the migration PRs with a single boilerplate version bump. |
 | **`tenacity` vs handrolled retry have different jitter behaviour** | Low | Low | Standardize on decorrelated jitter in the kit. Document the difference in the migration PR. Add a contract test that asserts retry timing falls inside a tolerance band. |
-| **First PyPI release naming collision** | Low | Low | `prajwal-resilience-kit` is unique on PyPI as of writing — reserve the name in M0. |
+| **First PyPI release naming collision** | Low | Low | `resilience-kit` is unique on PyPI as of writing — reserve the name in M0. |
 
 ---
 
@@ -418,5 +418,5 @@ A v0.1 release ships when **all** of the following are true:
 
 - `prajwalmahajan101/fastapi_boilerplate` — current async impl. Notable files: `src/core/resilience/{decorators,retry,registry,recovery}.py`, `src/core/utils/ssrf.py`, `docs/resilience.md`.
 - `prajwalmahajan101/django_boilerplate` — current sync impl. Notable files: `apps/core/resilience/{decorators,retry,registry,recovery}.py`, `docs/resilience.md` (state-machine diagrams).
-- `prajwalmahajan101/project-todo` — `projects/prajwal-resilience-kit.md` (the original one-pager spec this PRD supersedes).
+- `prajwalmahajan101/project-todo` — `projects/prajwal-resilience-kit.md` (the original one-pager spec this PRD supersedes; the file kept its original name in that repo).
 - Hashnode (planned): *Circuit-breaker placement is different in async than sync — here's why.*

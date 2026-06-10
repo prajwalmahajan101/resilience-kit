@@ -402,7 +402,104 @@ Before opening the boilerplate PR:
 
 ---
 
-## 10. After both PRs merge
+## 10. Patterns from the M7 dogfooding reports
+
+The FastAPI and Django boilerplate migrations completed during the M7 cycle each surfaced patterns that aren't obvious from the deletion + import-rewrite table alone. Read this section *before* you start the migration — it covers four traps the dogfooders hit on the fly and the fixes that worked.
+
+### 10.1 The exception bridge — make your base error a kit error
+
+The simplest, highest-leverage change in both migrations was making the boilerplate's `BaseCustomError` (or equivalent) inherit from the kit's `ResilienceKitError`:
+
+```python
+# apps/core/exceptions/base.py — AFTER
+from resilience_kit import ResilienceKitError
+
+class BaseCustomError(ResilienceKitError):
+    """Boilerplate's root exception — now also a ResilienceKitError."""
+    ...
+```
+
+One line. Three downstream wins:
+
+1. `@retry` and `@resilient` decorators (kit-side) can match on your `TransientError` / `ExternalTimeoutError` subclasses without you registering them anywhere.
+2. The kit's exception handler can fall back to your envelope shape if your handler ever fails to load.
+3. If you ship a kit-shaped microservice tomorrow, the same exception class works on both sides of the wire.
+
+**Pin the invariant with a test.** The Django dogfooding report (§3.6) flagged this line as load-bearing and untested — if someone later removes it ("looks redundant?"), the kit handler will start catching domain exceptions and break your envelope. Add a one-line `assert issubclass(BaseCustomError, ResilienceKitError)` in your `tests/core/test_exceptions.py`.
+
+### 10.2 Don't install two exception handler sets on the same app
+
+This is the single most expensive footgun the FastAPI dogfooding hit (FastAPI report §0.2). Both kit and boilerplate ship exception handlers that target *different* base classes, so they don't shadow each other — but they emit *different* wire shapes:
+
+| Raised by | Caught by | Wire shape |
+|---|---|---|
+| Code raising `BaseCustomError` subclasses | Boilerplate handler | `{success, message, data, errors:[{code, message, field, details}], request_id}` |
+| Code raising `ResilienceKitError` subclasses (the kit's `RateLimitError`, `ValidationError`, `DecryptionError`, `ServiceUnavailableError`, etc.) | Kit handler | `{error_code, message, details}` |
+
+If you `install_exception_handlers(app)` (kit) *and* `register_exception_handlers(app)` (boilerplate), rate-limited 429s and kit-infrastructure errors return the kit envelope; everything else returns yours. Existing API clients pattern-matching on `"success": false` break on rate-limited responses.
+
+**Pick one shape and stick with it:**
+
+- **Easiest** — apply the §10.1 exception bridge, then install **only** the boilerplate handler. The bridge makes `BaseCustomError` a `ResilienceKitError`, so subclassing each kit-shipped error into a boilerplate domain class (e.g. `class RateLimitError(BaseCustomError, ResilienceKitError.RateLimitError)`) lets your handler catch both trees with one envelope shape.
+- **Loudest** — install **only** the kit handler and document the new envelope shape as the API contract going forward (breaking change for existing clients).
+- **Most surgical** — install a small adapter handler that catches `ResilienceKitError`, re-wraps it as a `BaseCustomError`, and re-raises. Register it *before* both handler sets. ~15 LOC, no envelope-shape break for callers, no double-handler installation.
+
+A `from_exception(exc, *, envelope_cls=None)` helper that does the third option is on the v0.1.x patch line (see [ROADMAP.md](./ROADMAP.md) "Beyond v0.1").
+
+### 10.3 Wire your `request_id` ContextVar to the kit's
+
+The kit ships its own `resilience_kit.context.request_id: ContextVar[str | None]`. Its `RequestIdMiddleware` writes to *that* variable, not yours. If the boilerplate had its own `request_id_ctx` ContextVar (every existing FastAPI / Django boilerplate does) and any of its code reads from `request_id_ctx` to render logs, audit rows, or envelope `request_id` fields, you have to either:
+
+**Option A — rewrite consumers to read the kit's contextvar.** Cleanest. One import change in each consumer (`from src.core.context import request_id_ctx` → `from resilience_kit.context import request_id`). The kit's ContextVar becomes the single source of truth.
+
+**Option B — bridge in a small middleware.** Install a middleware *after* the kit's `RequestIdMiddleware` that copies the kit's value into your contextvar. Lower diff churn, but you now have two contextvars carrying the same value with a one-frame copy window between them. Acceptable for short-term migrations.
+
+This was finding §0.1 of the FastAPI dogfooding report — they shipped option B as a hot-fix to unblock the PR, then converted to option A in a follow-up. A `bind_to(consumer_ctxvar)` helper that makes option B a one-line subscription is on the v0.2 ROADMAP.
+
+**Symptom you'll see if you skip this step:** every log line, audit row, response envelope, and exception you raise has `request_id: null`. It's silent — no error, no warning — so verify by hitting `GET /healthz` post-migration and checking the response/log JSON for a populated `request_id`.
+
+### 10.4 Provider-API renames — old name → kit equivalent
+
+The boilerplates' resilience layer had a slightly different surface than the kit's. The names that changed during the M7 migration:
+
+| Pre-migration (boilerplate) | Post-migration (kit) | Notes |
+|---|---|---|
+| `backend.reset_backend(alias)` | `recovery.reset_provider(alias)` | Surgical reset of a single backend without touching the rest. `backend_name` attribute is no longer exposed on instances — read it from `HealthSnapshot.backend` instead. |
+| `backend.backend_name` | `HealthSnapshot.backend` | Returned by `health_check()`; backend identity is now part of the snapshot, not the instance. |
+| `backend.is_healthy()` | `(await backend.health_check()).healthy` | The kit returns a richer `HealthSnapshot(healthy, backend, degraded_since, detail, extra)` dataclass; pull `.healthy` if you only want the bool. |
+| `cache.invalidate(key)` | `cache.delete(key)` | Method rename. |
+| `breaker.force_close()` | `recovery.reset_provider(alias)` | Equivalent effect; the kit exposes the operation through recovery, not the breaker instance. |
+| `throttle.GlobalThrottle` | *(not shipped in v0.1)* | The Valkey-Lua system-wide cap is on the v0.2 ROADMAP. Until then, fronting your service with an L7 reverse proxy (`nginx limit_req`) provides the same defence layer. |
+| `AuthType` enum dispatch | `BasicAuth`, `BearerAuth`, `HMACAuth` classes | One-shot rename; a deprecation shim is on the v0.1.x patch line. |
+
+`reset_all_singletons()` is now a sync function (was `async def` in the boilerplate); if your tests used `await reset_all_singletons()`, drop the `await` or call the upcoming `reset_all_singletons_async()` shim (v0.1.x patch line).
+
+### 10.5 Operator env-var translation — required for every deployment
+
+The boilerplate-shaped env-var names (`RATE_LIMIT_*`, `CIRCUIT_BREAKER_*`, `FIELD_ENCRYPTION_KEY`, `OUTBOUND_ALLOWLIST`, `THROTTLE_*`) are **not read** by the kit. A production deploy that pinned `RATE_LIMIT_ANON=200/hour` in its env file will silently fall back to the kit's default unless the env file is updated. This bit the Django dogfooding deploy (Django report §3.3) and would have bit the FastAPI deploy if the team hadn't read the env file first.
+
+**Translation table** — copy this into your deployment runbook:
+
+| Boilerplate env var | Kit env var |
+|---|---|
+| `FIELD_ENCRYPTION_KEY` | `RESILIENCE_CRYPTO__FIELD_ENCRYPTION_KEY` |
+| `RATE_LIMIT_ANON` | `RESILIENCE_DEFAULTS__THROTTLE__ANON_RATE` (or the per-scope key for your tier) |
+| `RATE_LIMIT_AUTH` | `RESILIENCE_DEFAULTS__THROTTLE__AUTH_RATE` |
+| `RATE_LIMIT_BURST` | `RESILIENCE_DEFAULTS__THROTTLE__BURST_RATE` |
+| `CIRCUIT_BREAKER_FAIL_MAX` | `RESILIENCE_DEFAULTS__CIRCUIT_BREAKER__FAIL_MAX` |
+| `CIRCUIT_BREAKER_RESET_TIMEOUT` | `RESILIENCE_DEFAULTS__CIRCUIT_BREAKER__RESET_TIMEOUT` |
+| `OUTBOUND_ALLOWLIST` | `RESILIENCE_SSRF__OUTBOUND_ALLOWLIST` (JSON list, not a comma-separated string) |
+| `REDIS_URL` | `RESILIENCE_REDIS_URL` |
+| `RECOVERY_PROBE_INTERVAL` | `RESILIENCE_RECOVERY__PROBE_INTERVAL_SECONDS` |
+| `AUDIT_SINK` | `RESILIENCE_AUDIT__SINK` |
+
+Audit every env file (`.env`, `.env.staging`, `.env.production`, `helm/values-*.yaml`, `terraform/secrets.tf`, etc.) before promoting the migration branch past staging. A `legacy_env_alias()` translator that maps the old names with a one-time `DeprecationWarning` is on the v0.1.x patch line, but it requires a caller-side import — it does not auto-activate.
+
+**Crypto-key fallback warning.** The kit's `FernetCipher` refuses to start in `environment="prod"` without `RESILIENCE_CRYPTO__FIELD_ENCRYPTION_KEY`. The boilerplate's old fallback to `SECRET_KEY` is gone. Local / test environments still get the dev-key fallback; production deploys without the env var will fail at the first encrypt or decrypt call rather than silently using the wrong key.
+
+---
+
+## 11. After both PRs merge
 
 1. Tag `milestone/m7` on the kit's `main` (dev checkpoint).
 2. Proceed to M8: version bump, CHANGELOG, PyPI publish, GitHub release.

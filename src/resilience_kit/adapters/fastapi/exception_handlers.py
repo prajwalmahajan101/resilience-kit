@@ -19,6 +19,30 @@ adapter handlers in addition gives FastAPI users richer integration
 (handlers can be inspected via ``app.exception_handlers``, can be
 overridden per exception, and run inside FastAPI's request lifecycle so
 ``request.state`` is still readable).
+
+.. warning::
+
+   If your app already installs its own exception handlers against a
+   different envelope shape (e.g. a ``{success, message, data, errors,
+   request_id}`` envelope mounted on a custom ``BaseError`` tree), do
+   **not** call :func:`install` blindly — the kit handlers target
+   :class:`~resilience_kit.exceptions.ResilienceKitError` and emit the
+   LLD §11 envelope, which is incompatible with that shape. The M7
+   FastAPI dogfooding report (§0.2) hit this: rate-limited 429s started
+   returning the kit envelope while everything else returned the
+   project envelope, breaking clients that pattern-matched on
+   ``success: false``. The choices, in order of least friction:
+
+   1. Subclass each kit exception into your domain hierarchy and route
+      everything through your handler (apply the "exception bridge"
+      pattern from ``docs/MIGRATION-from-boilerplate-embedded.md``
+      §10.1).
+   2. Install a thin :class:`ResilienceKitError`-catching handler
+      before both handler sets that re-wraps into your envelope (see
+      ``docs/MIGRATION-from-boilerplate-embedded.md`` §10.2 — a
+      :func:`from_exception` helper is on the v0.1.x patch line).
+   3. Accept the kit envelope as the new contract and document the
+      shape change (breaking for existing clients).
 """
 
 from __future__ import annotations

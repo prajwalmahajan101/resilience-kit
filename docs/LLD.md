@@ -248,6 +248,14 @@ except ImportError as exc:                       # pragma: no cover
     raise MissingExtraError("redis", install_hint="resilience-kit[redis]") from exc
 ```
 
+### Precedence: third-party entry points shadow same-named builtins
+
+The resolution chain walks entry points (step 3) **before** builtins (step 4). A third-party package that publishes an entry point named `memory` in `resilience_kit.cache_backends` therefore wins over the kit's own `memory` builtin. This is intentional and documented in [ADR 0004](./adr/0004-entry-points-for-third-party-backends.md): a third party can ship a drop-in replacement for any kit builtin without forking. It is also a footgun for accidental collisions — operators who add a third-party package expecting it to register a *new* backend may instead silently replace one. Mitigations:
+
+- Third-party publishers should namespace backend names (`acme-redis`, not `redis`).
+- The kit's contract suite parametrizes over both kit builtins and a fake third-party fixture (`tests/fixtures/fake_third_party/`) so both paths are covered.
+- `UnknownBackendError` includes the full list of resolved names so an operator can audit which backends are visible at runtime.
+
 ---
 
 ## 4. Decorator composition — `@resilient`

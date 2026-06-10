@@ -14,6 +14,16 @@ audit / sanitizer / metrics / settings-source). Resolution order:
 Backends gated behind a pip extra raise :class:`MissingExtraError` at
 import time (not first use), so the failure is immediate and the hint is
 unambiguous.
+
+Precedence note (ADR 0004): entry points are checked **before** builtins
+(step 3 before step 4). A third-party package that publishes an entry
+point with the same name as a kit builtin therefore **shadows** the
+builtin. This is intentional — it lets a third party ship a drop-in
+replacement for ``memory`` / ``noop`` / ``stdlib_logging`` without
+forking the kit — but it is also a footgun for accidental name
+collisions. Operators should namespace third-party backend names
+(``acme-redis``, not ``redis``) to avoid surprises. Documented in
+``docs/LLD.md`` §3 and ``docs/adr/0004-entry-points-for-third-party-backends.md``.
 """
 
 from __future__ import annotations

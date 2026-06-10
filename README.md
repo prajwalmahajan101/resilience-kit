@@ -8,7 +8,7 @@
 [![CI](https://github.com/prajwalmahajan101/resilience-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/prajwalmahajan101/resilience-kit/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** [`0.1.0rc1`](https://pypi.org/project/resilience-kit/0.1.0rc1/) on PyPI (pre-release). M0–M8a complete (scaffold · primitives · Redis/Valkey + pybreaker backends · HTTP client + SSRF + crypto · audit + middleware + metrics · FastAPI + Django adapters · rc1 cut). M7 boilerplate migrations and M8b release-prep are the last gates before `v0.1.0` final (see [Tagging convention](./docs/ROADMAP.md#tagging-convention)). Design is locked across six docs:
+> **Status:** [`0.1.0`](https://pypi.org/project/resilience-kit/0.1.0/) on PyPI (stable). M0–M8 complete (scaffold · primitives · Redis/Valkey + pybreaker backends · HTTP client + SSRF + crypto · audit + middleware + metrics · FastAPI + Django adapters · boilerplate migrations · `v0.1.0` cut + pre-cut ergonomics bundle). See [Tagging convention](./docs/ROADMAP.md#tagging-convention) for milestone tags. Design is locked across six docs:
 >
 > | Doc | What it answers |
 > |---|---|
@@ -38,14 +38,14 @@ You probably want this if you've ever:
 
 ## Install
 
-Until `v0.1.0` final ships, pin the pre-release explicitly:
-
 ```bash
-pip install resilience-kit==0.1.0rc1                        # core: pure-python, no I/O deps
-pip install "resilience-kit[fastapi,redis,http]==0.1.0rc1"  # FastAPI app on Valkey
-pip install "resilience-kit[django,redis,http]==0.1.0rc1"   # Django app on Valkey
-pip install "resilience-kit[all]==0.1.0rc1"                 # everything
+pip install resilience-kit                        # core: pure-python, no I/O deps
+pip install "resilience-kit[fastapi,redis,http]"  # FastAPI app on Valkey
+pip install "resilience-kit[django,redis,http]"   # Django app on Valkey
+pip install "resilience-kit[all]"                 # everything
 ```
+
+> Upgrading from `0.1.0rc1`? See [`docs/MIGRATION-rc1-to-v0.1.0.md`](./docs/MIGRATION-rc1-to-v0.1.0.md) — quick-path pin bump plus the helper recipes that remove the M7 dogfooding blockers (`request_id` ContextVar bridging, single-envelope exception handling, legacy env-var translation, exception-bridge contract test).
 
 ### Available extras
 
@@ -323,9 +323,9 @@ async def test_throttle_under_load(redis_url):
 | M4 | Audit + middleware + metrics + entry-point wiring | ✅ shipped |
 | M5 | FastAPI adapter | ✅ shipped |
 | M6 | Django adapter | ✅ shipped |
-| M7 | Boilerplate migrations | 🟡 in progress |
+| M7 | Boilerplate migrations | ✅ shipped |
 | M8a | `0.1.0rc1` on PyPI | ✅ shipped |
-| M8b | Release-prep + `v0.1.0` final | 🟡 in progress |
+| M8b | Release-prep + `v0.1.0` final | ✅ shipped |
 
 **v0.2+** — Flask adapter · Celery adapter · Litestar adapter · `resilience_kit doctor` CLI · Sphinx site.
 
@@ -353,6 +353,6 @@ MIT. See [LICENSE](./LICENSE).
 
 ## Related
 
-- [`prajwalmahajan101/fastapi_boilerplate`](https://github.com/prajwalmahajan101/fastapi_boilerplate) — async FastAPI starter, depends on `resilience-kit==0.1.0rc1` as of the M7 migration PR.
+- [`prajwalmahajan101/fastapi_boilerplate`](https://github.com/prajwalmahajan101/fastapi_boilerplate) — async FastAPI starter, depends on `resilience-kit==0.1.0` as of the M7 migration PR.
 - [`prajwalmahajan101/django_boilerplate`](https://github.com/prajwalmahajan101/django_boilerplate) — Django + DRF starter, ditto.
 - Blog: *Circuit-breaker placement is different in async than sync — here's why.* (forthcoming on Hashnode)

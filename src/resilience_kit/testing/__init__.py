@@ -1,8 +1,9 @@
-"""Testing helpers — fakes and singleton-reset.
+"""Testing helpers — fakes, singleton-reset, contract verification.
 
 Public surface: :class:`Clock`, :class:`SystemClock`, :class:`FakeClock`,
 :class:`FakeAuditSink`, :func:`reset_all_singletons`,
-:func:`reset_all_singletons_async`.
+:func:`reset_all_singletons_async`, :func:`verify_envelope_contract`,
+:data:`DEFAULT_KIT_EXCEPTIONS`.
 
 The reset helpers are imported lazily to break the circular dependency
 between the testing package and the primitives that themselves use
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from resilience_kit.testing.contract import DEFAULT_KIT_EXCEPTIONS, verify_envelope_contract
 from resilience_kit.testing.fakes import (
     Clock,
     FakeAuditSink,
@@ -47,10 +49,12 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "DEFAULT_KIT_EXCEPTIONS",
     "Clock",
     "FakeAuditSink",
     "FakeClock",
     "SystemClock",
     "reset_all_singletons",
     "reset_all_singletons_async",
+    "verify_envelope_contract",
 ]

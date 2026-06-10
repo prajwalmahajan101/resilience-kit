@@ -56,7 +56,7 @@ requests = ["requests>=2.31"]
 crypto = ["cryptography>=42.0"]
 audit-postgres = ["asyncpg>=0.29"]
 django = ["django>=4.2", "djangorestframework>=3.14"]
-fastapi = ["fastapi>=0.110", "starlette>=0.36"]
+fastapi = ["fastapi>=0.110", "starlette>=0.36", "sqlalchemy>=2.0", "httpx>=0.27,<0.29"]
 all = [
     "redis>=5.0",
     "httpx>=0.27,<0.29",
@@ -67,6 +67,7 @@ all = [
     "djangorestframework>=3.14",
     "fastapi>=0.110",
     "starlette>=0.36",
+    "sqlalchemy>=2.0",
 ]
 
 # Entry-point groups for third-party backend discovery (LLD §3).

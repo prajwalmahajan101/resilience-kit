@@ -10,6 +10,21 @@ JSON body, and (for :class:`RateLimitError`) the ``Retry-After`` +
 Non-kit exceptions fall through to ``rest_framework.views.exception_handler``
 so DRF's existing handlers for :class:`ValidationError`,
 :class:`PermissionDenied`, etc. still apply.
+
+.. warning::
+
+   If your project already installs a DRF ``EXCEPTION_HANDLER`` against
+   a different envelope shape (e.g. a
+   ``{success, message, data, errors, request_id}`` envelope built
+   around a ``BaseCustomError`` tree), pointing
+   ``REST_FRAMEWORK['EXCEPTION_HANDLER']`` at this :func:`handle`
+   instead will silently change the wire shape for every
+   :class:`~resilience_kit.exceptions.ResilienceKitError` your code
+   raises. The recommended fix from the M7 Django dogfooding report is
+   the *exception bridge*: make your ``BaseCustomError`` inherit from
+   :class:`~resilience_kit.exceptions.ResilienceKitError` and keep your
+   existing handler installed. See
+   ``docs/MIGRATION-from-boilerplate-embedded.md`` §10.1–§10.2.
 """
 
 from __future__ import annotations

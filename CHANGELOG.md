@@ -8,6 +8,11 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 - `ResilienceSettings` now uses `extra="forbid"` at the model root: unknown top-level keys in dict-shaped inputs (Django `settings.RESILIENCE = {...}`, programmatic `model_validate(...)`, JSON configs) raise `pydantic.ValidationError` instead of being silently dropped. Catches the legacy-key footgun (`CIRCUIT_BREAKER_CONFIG`, `RATE_LIMIT_CONFIG`, `FIELD_ENCRYPTION_KEY`) that the M7 boilerplate migration was about to import verbatim. Strictness on unknown `RESILIENCE_*` env vars is **not** included — pydantic-settings filters them at the source layer; tracked as a follow-up.
 
+### Documentation — M7 dogfooding patterns (no behavior change)
+
+- `docs/MIGRATION-from-boilerplate-embedded.md` §10 — new "Patterns from the M7 dogfooding reports" section covering the four traps the FastAPI + Django boilerplate migrations hit on the fly: the `BaseCustomError(ResilienceKitError)` exception-bridge pattern, the two-handler envelope-collision footgun, request-id `ContextVar` interop, the provider-API rename table, and the operator env-var translation table. **Operator action required before promoting any v0.1.0 migration past staging** — audit every `.env*` file against the env-var translation table in §10.5; the kit does not read the legacy `RATE_LIMIT_*` / `CIRCUIT_BREAKER_*` / `FIELD_ENCRYPTION_KEY` names.
+- `adapters/fastapi.exception_handlers.install` and `adapters/django.exception_handler.handle` docstrings now warn that installing the kit handlers alongside a project's own exception handlers can silently change the wire shape for kit-raised exceptions (the M7 FastAPI report §0.2 footgun) and cross-link the migration-doc remediation.
+
 ## [0.1.0rc1] - 2026-06-10
 
 First public release candidate. Cut to PyPI as a packaging smoke-test before the M7 boilerplate migration. Pre-release per [PEP 440](https://peps.python.org/pep-0440/) — `pip` will not install it without an explicit version pin or `--pre`. The 0.1.0 final ships at M8b after both boilerplates depend on the kit.

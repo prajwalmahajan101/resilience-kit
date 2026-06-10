@@ -49,3 +49,6 @@ poetry.lock
 # Local Claude Code rules — project-private
 CLAUDE.md
 .claude/
+
+# Personal blog drafts — never committed; live local only
+docs/blog/

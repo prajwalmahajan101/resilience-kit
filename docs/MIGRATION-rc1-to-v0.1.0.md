@@ -85,11 +85,47 @@ class YourRequestIdMiddleware:
 ```
 
 Django sync middleware is the same shape — a `with bind_to(...)` block
-inside `__call__` / `process_request`.
+inside `__call__` / `process_request`:
+
+```python
+# apps/core/middleware/bind_request_id.py (Django, sync)
+from resilience_kit.context import bind_to
+from apps.core.context import request_id_ctx       # your own ContextVar
+
+class BindRequestIdMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        with bind_to(request_id_ctx):
+            return self.get_response(request)
+```
+
+Add it to `MIDDLEWARE` **after** `resilience_kit.adapters.django.middleware.RequestIdMiddleware`
+so the kit's value is already seeded when the bridge runs.
+
+> **"My project has no request-id middleware to wrap" case.** Both M7
+> boilerplates hit this — after the rc1 migration their original
+> request-id middleware was removed, and the kit's `RequestIdMiddleware`
+> became the only writer. In that case, the bridge **is** the middleware:
+> create the file above (FastAPI or Django shape), give it one job
+> (`with bind_to(...): pass-through`), and slot it after the kit's
+> middleware in the stack. There is nothing else to wrap.
 
 **Verify.** `curl -i localhost:8000/healthz` should return a JSON body
 whose `request_id` field is a 32-char hex string, not `null`. Log lines
-emitted during that request should carry the same id.
+emitted during that request should carry the same id. The
+`X-Request-Id` response header (set by the kit's middleware) should
+match the value in the body.
+
+> **Note on `from_exception` and `request_id`.** `from_exception(exc)`
+> reads `resilience_kit.context.request_id.get()` and only writes the
+> value into the projected body when the consumer's `envelope_cls`
+> declares a `request_id` field. If your handler builds the envelope
+> manually (no `envelope_cls`), or if you have not installed the
+> `bind_to(request_id_ctx)` bridge above, the field will come back as
+> `None` — your DRF / FastAPI handler must top up the value from your
+> own ContextVar after the `from_exception` call.
 
 ### 3.2 B2 — Two exception envelopes on the same app
 
@@ -138,6 +174,33 @@ bug. Same advice for Django: do **not** set
 `REST_FRAMEWORK['EXCEPTION_HANDLER']` to the kit's `handle`; use your own
 DRF handler and route through `from_exception` inside it.
 
+> **Projection caveat — list-item shapes with extra required fields.**
+> The default projection emits `errors: [{"field": k, "message": str(v)}]`
+> per entry. If your envelope's error-list-item shape declares additional
+> required fields (e.g. a required `code` on each `ErrorDetail`), the
+> projected list will fail validation with a "missing required field"
+> error. The M7 FastAPI report hit this — their `ErrorDetail.code` is
+> required.
+>
+> **Workaround until a v0.1.x patch ships a `code`-aware projection or a
+> per-entry callback hook:** drop the `envelope_cls=...` arg and translate
+> manually inside your handler:
+>
+> ```python
+> body, status, headers = from_exception(exc)        # default LLD shape
+> envelope = ResponseEnvelope(
+>     success=False,
+>     message=body["message"],
+>     errors=[ErrorDetail(code=body["error_code"], field=k, message=str(v))
+>             for k, v in body["details"].items()],
+>     request_id=request_id_ctx.get(),               # top up from your bridge
+> )
+> return JSONResponse(envelope.model_dump(), status_code=status, headers=headers)
+> ```
+>
+> The same caveat applies when projecting onto `details` *(dict)* with
+> a required typed-dict value shape. Translate manually in that case too.
+
 **Verify.** Hit a rate-limited endpoint 3× and confirm the 429 body
 matches your envelope schema (`success: false`, `errors: [...]`,
 `request_id: <hex>`), and that `Retry-After` + `X-RateLimit-*` headers
@@ -166,13 +229,42 @@ legacy_env_alias()        # translates legacy → RESILIENCE_* in os.environ,
 
 The kit-prefixed name always wins on collision. The `DeprecationWarning`
 gives operators a deterministic signal to fix `.env*` files in their own
-time. Pass `warn=False` to silence it in short-lived CI jobs; pass a
-narrower `aliases=` dict to bridge only a subset.
+time. Pass `warn=False` to silence it in short-lived CI jobs.
+
+> **Placement is load-bearing.** Call `legacy_env_alias()` at the **top
+> of `settings/base.py` (Django) or `src/core/settings.py` (FastAPI)**,
+> before *any* import that instantiates a `pydantic_settings.BaseSettings`
+> subclass — including `from resilience_kit.settings import ResilienceSettings`.
+> pydantic-settings reads `os.environ` at instance-construction time, so
+> if the alias call runs *after* construction it has no effect on the
+> already-built settings instance. Django's `ResilienceConfig.ready()`
+> reads env at AppConfig boot — the alias must already have run.
+>
+> **Extending the alias table.** `aliases=` *replaces* the default table.
+> If you want to bridge boilerplate-specific names (e.g. `JWT_*`) **in
+> addition to** the kit's `DEFAULT_ALIASES`, merge explicitly:
+>
+> ```python
+> from resilience_kit.runtime import DEFAULT_ALIASES, legacy_env_alias
+>
+> legacy_env_alias(aliases={
+>     **DEFAULT_ALIASES,
+>     "JWT_PRIVATE_KEY": "MYAPP_JWT__PRIVATE_KEY",
+>     "JWT_AUDIENCE":    "MYAPP_JWT__AUDIENCE",
+> })
+> ```
+>
+> A v0.1.x patch is on the ROADMAP to add an `extra_aliases=` arg that
+> merges with the default automatically.
 
 **Verify.** Set a legacy var (`RATE_LIMIT_AUTH=30/min`) in a throwaway
 shell, import your settings module, and confirm:
 1. `os.environ['RESILIENCE_DEFAULTS__THROTTLE__AUTH_RATE'] == '30/min'`.
 2. A `DeprecationWarning` mentioning `RATE_LIMIT_AUTH` fired during import.
+
+The full `DEFAULT_ALIASES` table is in
+[`MIGRATION-from-boilerplate-embedded.md` §10.5](./MIGRATION-from-boilerplate-embedded.md#105-operator-env-var-translation--required-for-every-deployment)
+and printed in §4 of this doc.
 
 ### 3.4 Django §3.6 — Untested exception-bridge invariant
 
@@ -186,15 +278,39 @@ handler, can silently regress one branch.
 **Fix.** Add one test that exercises every HTTP-reachable kit exception
 through your handler + envelope schema.
 
+**FastAPI shape** — handler returns a Starlette `JSONResponse`, body
+bytes at `.body`:
+
 ```python
 # tests/test_envelope_contract.py
+import asyncio, json
 from resilience_kit.testing import verify_envelope_contract
 from src.core.exception_handlers import on_kit_error
 from src.core.envelope import ResponseEnvelope
 
 def test_kit_envelope_contract():
+    def call(exc):
+        response = asyncio.run(on_kit_error(request=None, exc=exc))
+        return json.loads(response.body)
+
     verify_envelope_contract(
-        handler=lambda exc: on_kit_error(request=None, exc=exc).body,
+        handler=call,
+        envelope_schema=ResponseEnvelope.model_validate,
+    )
+```
+
+**Django / DRF shape** — handler returns a DRF `Response`, dict at
+`.data`:
+
+```python
+# apps/core/tests/test_envelope_contract.py
+from resilience_kit.testing import verify_envelope_contract
+from apps.core.exceptions.handler import api_exception_handler
+from apps.core.responses.envelope_schema import ResponseEnvelope
+
+def test_kit_envelope_contract():
+    verify_envelope_contract(
+        handler=lambda exc: api_exception_handler(exc, {}).data,
         envelope_schema=ResponseEnvelope.model_validate,
     )
 ```
@@ -202,7 +318,18 @@ def test_kit_envelope_contract():
 If any kit exception's projected body doesn't validate against
 `ResponseEnvelope`, the test fails with an `AssertionError` that lists
 **every** broken class — not just the first one — so the failure report
-is actionable in one CI run.
+is actionable in one CI run. (A v0.1.x patch will switch the return
+shape to a structured `EnvelopeContractResult` so CI dashboards can
+introspect each branch rather than parse the assertion message.)
+
+> **`exceptions=` default is open by design.** If you don't pass
+> `exceptions=...`, the helper exercises every class in
+> `resilience_kit.testing.DEFAULT_KIT_EXCEPTIONS` at *call time*. A
+> future kit release that adds an HTTP-reachable exception class will
+> automatically be picked up by your existing test — your bridge has to
+> accommodate it or the test fails. Don't pin a frozen tuple
+> defensively unless your bridge explicitly opts out of forward
+> compatibility.
 
 **Verify.** Deliberately break your handler (e.g. drop the `errors`
 field) and confirm the test fails listing every exception class.
@@ -240,6 +367,38 @@ Linear, top-to-bottom. Each step should pass before moving to the next.
   - one authenticated endpoint — request_id non-null in both the response body and the log line.
   - one rate-limited endpoint, hit it past the limit — expect 429 with `Retry-After` header + your envelope's `errors`/`details` populated.
 - [ ] **Step 6 — Migration report.** Fill in the §5 template and file it. This is the gate that makes future kit releases better; please do not skip it.
+
+### 4.1 `DEFAULT_ALIASES` env-var mapping
+
+Reference table for the operator-side audit of every `.env*`, helm
+`values-*.yaml`, and terraform secrets file. `legacy_env_alias()`
+translates the legacy name on the left to the kit name on the right at
+process start and emits a `DeprecationWarning` per row that fires. The
+runbook should remove the legacy names in a follow-up sweep so the
+warning channel goes quiet.
+
+| Legacy name | Kit name (`RESILIENCE_*`) |
+|---|---|
+| `FIELD_ENCRYPTION_KEY` | `RESILIENCE_CRYPTO__FIELD_ENCRYPTION_KEY` |
+| `REDIS_URL` | `RESILIENCE_REDIS_URL` |
+| `OUTBOUND_ALLOWLIST` | `RESILIENCE_SSRF__OUTBOUND_ALLOWLIST` |
+| `SSRF_ALLOWLIST` | `RESILIENCE_SSRF__OUTBOUND_ALLOWLIST` |
+| `BLOCK_PRIVATE_IPS` | `RESILIENCE_SSRF__BLOCK_PRIVATE_IPS` |
+| `RATE_LIMIT_ANON` | `RESILIENCE_DEFAULTS__THROTTLE__ANON_RATE` |
+| `RATE_LIMIT_AUTH` | `RESILIENCE_DEFAULTS__THROTTLE__AUTH_RATE` |
+| `RATE_LIMIT_BURST` | `RESILIENCE_DEFAULTS__THROTTLE__BURST_RATE` |
+| `CIRCUIT_BREAKER_FAIL_MAX` | `RESILIENCE_DEFAULTS__CIRCUIT_BREAKER__FAIL_MAX` |
+| `CIRCUIT_BREAKER_RESET_TIMEOUT` | `RESILIENCE_DEFAULTS__CIRCUIT_BREAKER__RESET_TIMEOUT` |
+| `RECOVERY_PROBE_INTERVAL` | `RESILIENCE_RECOVERY__PROBE_INTERVAL_SECONDS` |
+| `AUDIT_SINK` | `RESILIENCE_AUDIT__SINK` |
+
+The canonical source for this table is
+[`src/resilience_kit/runtime.py`](../src/resilience_kit/runtime.py)
+`DEFAULT_ALIASES`. If the table here drifts, the source wins.
+
+Project-specific names (e.g. `JWT_*`, app-internal secrets) are not in
+the table — extend it via the merge pattern in §3.3 to bridge those
+without losing the kit-shipped defaults.
 
 ---
 

@@ -235,20 +235,45 @@ Items below come from two streams: the original v0.1 design that explicitly punt
 
 Cut as needed during v0.1.0 → v0.2.0. Single-feature minor versions; no API removals.
 
-- **`reset_all_singletons_async()`** — async-def shim alongside the sync `reset_all_singletons()` so test harnesses that previously used `async def` keep their signature without a `to_thread` wrapper. ~10 LOC. **[dogfooding]** FastAPI report §3.3.
-- **`from_exception(exc, *, envelope_cls=None)`** — kit-side helper that builds a JSONResponse from a `ResilienceKitError`, optionally re-shaped through a caller-supplied envelope class. Lets adopters keep their existing `{success, message, data, errors, request_id}` wire shape without re-implementing the handler. ~30 LOC. **[dogfooding]** FastAPI report §0.2 + Report-2 §wishlist-4.
+> **Status as of v0.1.0 cut:** Five items below (`reset_all_singletons_async`,
+> `from_exception`, `legacy_env_alias`, `verify_envelope_contract`,
+> `bind_to`) shipped early as the §3.1 pre-cut ergonomics bundle (PR #22).
+> Items below the divider are the new patch-line candidates surfaced by
+> the M8b upgrade reports filed by both boilerplates. See
+> [`docs/m8b-upgrade-reports/SUMMARY.md`](./m8b-upgrade-reports/SUMMARY.md)
+> for the synthesis.
+
+**Shipped in v0.1.0 (pre-cut bundle, kept here for historical traceability):**
+
+- ~~**`reset_all_singletons_async()`**~~ shipped in v0.1.0. **[dogfooding]** FastAPI report §3.3.
+- ~~**`from_exception(exc, *, envelope_cls=None)`**~~ shipped in v0.1.0 at `resilience_kit.adapters._envelope`. **[dogfooding]** FastAPI report §0.2.
+- ~~**`legacy_env_alias()` translator**~~ shipped in v0.1.0 at `resilience_kit.runtime`. **[dogfooding]** Django report §3.3.
+- ~~**`verify_envelope_contract()` test helper**~~ shipped in v0.1.0 at `resilience_kit.testing`. **[dogfooding]** Django report §4.5.
+- ~~**`bind_to(consumer_ctxvar)`**~~ shipped in v0.1.0 at `resilience_kit.context` (originally slated for v0.2). **[dogfooding]** FastAPI report §0.1.
+
+**Not yet shipped — kept on the patch line:**
+
 - **`AuthType` deprecation shim** — re-export the legacy `AuthType` enum name from `http_client.auth` with a `DeprecationWarning` for one minor cycle so the M7 codemod path is graceful for repos still on the enum dispatch pattern. ~15 LOC. **[dogfooding]** FastAPI report §3.8 + Report-2 §wishlist-7.
-- **`legacy_env_alias()` translator** — utility that callers import once in their settings module to map legacy env-var names (`RATE_LIMIT_*`, `CIRCUIT_BREAKER_*`, `FIELD_ENCRYPTION_KEY`, …) onto the `RESILIENCE_*` schema with a one-time `DeprecationWarning` per alias used. Removes the silent operator-tuning loss that hit the Django dogfooding migration. ~40 LOC + an env-alias table. **[dogfooding]** Django report §3.3 + §4.6.
-- **`verify_envelope_contract()` test helper** — kit-side pytest fixture that asserts "given your project's `EXCEPTION_HANDLER`, raising each `ResilienceKitError` subclass returns your envelope shape". Lets adopters pin the bridge invariant from §3.6 of the Django report (`BaseCustomError(ResilienceKitError)` is one load-bearing line with no test today). ~50 LOC. **[dogfooding]** Django report §4.5.
+
+**M8b upgrade-report findings (new patch-line candidates):**
+
+- **Rename / re-export `from_exception` out of `_envelope`** — public bridge currently imports from `resilience_kit.adapters._envelope`; the leading underscore reads as "private API" to consumers and reviewers. Either re-export at `resilience_kit.adapters` (preferred) or rename the module to `resilience_kit.adapters.envelope`. Both M8b reports flagged this. ~5 LOC + alias for one release. **[m8b-intake]** SUMMARY X1.
+- **Structured `EnvelopeContractResult` from `verify_envelope_contract`** — currently raises a flat `AssertionError`; pytest only surfaces the first failing class, and CI dashboards can't introspect per-branch outcomes. Return a `list[(exc_class, ok, reason)]` (or named-tuple) and have pytest assertions surface the full table. Keep current raise-on-failure semantics behind a default flag for backwards compatibility. ~30 LOC. **[m8b-intake]** SUMMARY X2.
+- **`legacy_env_alias(extra_aliases={...})`** — mergeable parameter that extends rather than replaces `DEFAULT_ALIASES`. Today adopters who want to bridge boilerplate-specific names (e.g. `JWT_*`) must `aliases={**DEFAULT_ALIASES, ...}` by hand. ~10 LOC. **[m8b-intake]** SUMMARY X3.
+- **`from_exception` projection writes `code` onto error-list-item shapes** — when `envelope_cls.errors[*]` declares a required `code` field, the current `[{field, message}]` projection fails validation. Fix: include `code=exc.error_code` when the target item shape declares it. Alternative: a per-entry callback hook (`error_item_factory=...`). Either closes the FastAPI report's pain point #1. ~20 LOC + tests. **[m8b-intake]** SUMMARY F1.
+- **`create_health_router()` / `create_readiness_router()` in `adapters/fastapi`** — promote from v0.2 to v0.1.1. Both M8b reports kept their own ~200 LOC health router; the FastAPI boilerplate explicitly requested this in writing. Mechanically small now that the kit ships `health_snapshot()`. ~80 LOC. **[m8b-intake]** SUMMARY F2 (was v0.2 wishlist-1).
+- **`ResilienceKitError.details` as instance attribute, not `@property`** — the Django bridge had to shadow the property to keep `ValidationError.__init__` writable. Trivial change in `exceptions/base.py`. ~3 LOC. **[m8b-intake]** Django report missing-surface #5.
 
 ### v0.2 — adopter ergonomics
 
 Theme: close the three biggest "needed this in production at any scale" gaps the FastAPI dogfooding flagged. Each is small in code but high in noticeable-friction-eliminated.
 
-- **FastAPI health-check routers in `adapters/fastapi`** — `create_health_router()` / `create_readiness_router()` factories that mount `/healthz` + `/readyz` with per-backend probe rows. Every adopter hand-rolls ~80 LOC of this today. **[dogfooding]** FastAPI report §3.7 + Report-2 §wishlist-1 (highest impact).
+> **M8b intake update:** the M8b upgrade reports re-prioritised `create_health_router` into v0.1.1 (above). The remaining items below are still v0.2.
+
+- **FastAPI health-check routers in `adapters/fastapi`** — *(promoted to v0.1.1 patch line per M8b intake; see above)*. **[dogfooding]** FastAPI report §3.7 + Report-2 §wishlist-1 + SUMMARY F2.
 - **`MetricsSink` cardinality contract** — promote the boilerplate's `_assert_bounded` pattern (~80 LOC) into either a `BoundedMetricsSink` decorator or a Protocol upgrade with a `cardinality_budget: int` knob. The current "log this dict" `MetricsSink` shape is the single biggest production-risk regression in v0.1 — the first time someone slips a `request_id` label past code review, Prometheus explodes. **[dogfooding]** FastAPI report §3.6 + Report-2 §lost-3 + Report-2 §wishlist-2 + Django report §3.2.
 - **Free-function metrics shim** — ship `from resilience_kit.metrics import record_duration, record_counter, record_gauge` over the Protocol sink so projects can keep their existing call sites and still tee into the kit's pluggable backend. Lands alongside the cardinality contract above. ~40 LOC. **[dogfooding]** Django report §4.7.
-- **`bind_to(consumer_ctxvar)` helper** on `resilience_kit.context.request_id` — first-class story for adopters who keep their own request-id ContextVar (every existing FastAPI / Django boilerplate does). Eliminates the silent-null-correlation footgun the FastAPI dogfooding hit on commit 1. **[dogfooding]** FastAPI report §0.1 + Report-2 §wishlist-5.
+- ~~**`bind_to(consumer_ctxvar)` helper**~~ — *(shipped in v0.1.0 pre-cut bundle, see v0.1.x list above)*. **[dogfooding]** FastAPI report §0.1.
 - **Real `DjangoSettingsSource`** — make `settings.RESILIENCE = {...}` actually load-bearing. The Django adapter currently reads only the `services` key out of the dict; the rest is documentation in Python-dict shape. A real source maps the whole tree onto `ResilienceSettings`, so Django adopters configure the kit through Django's own settings instead of env vars. The Django dogfooding report calls this the "single highest-leverage doc + code change the kit can ship next." ~150 LOC + tests. **[dogfooding]** Django report §3.5 + §4.1.
 - **`GlobalThrottle`** — Valkey + Lua-backed system-wide cap (e.g. `10_000/min` regardless of scope key). The Django boilerplate had this as a defence layer for deployments without an L7 reverse proxy and lost it in the migration; restore via the kit. ~120 LOC of Lua + Python wrapper. **[dogfooding]** Django report §3.1 + §4.3.
 - **Flask adapter** — same shape as fastapi / django: `install_middleware_stack`, `install_exception_handlers`, lifespan-equivalent via Flask app factory hooks.

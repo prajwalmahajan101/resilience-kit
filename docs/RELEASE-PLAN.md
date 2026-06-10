@@ -665,6 +665,8 @@ context survives the conversation.
 | 2026-06-11 | Approved §3.1 pre-cut helpers A–E in v0.1.0 (full bundle, additive only) | User: "we have D1 ... If approved → open feat/m8b-pre-cut-ergonomics and execute." |
 | 2026-06-11 | Landed `feat/m8b-pre-cut-ergonomics` — `bind_to`, `reset_all_singletons_async`, `verify_envelope_contract`, `from_exception` (+adapter refactor), `legacy_env_alias` | This branch / commits e877a88..3b3238d (PR #22 merged at 2cc554c) |
 | 2026-06-11 | Wrote rc1→v0.1.0 upgrade doc + standardized migration report template | [`docs/MIGRATION-rc1-to-v0.1.0.md`](./MIGRATION-rc1-to-v0.1.0.md) — sink for adopter feedback into v0.1.x / v0.2 ROADMAP |
+| 2026-06-11 | Cut v0.1.0 + published to PyPI via Trusted Publishing (after release.yml smoke-assertion fix in PR #24) | `main@db96edb` tagged `v0.1.0`; PyPI shows 0.1.0 non-pre-release; GitHub Release `v0.1.0` (`isPrerelease=false`) with sdist + wheel attached |
+| 2026-06-11 | Intook M8b boilerplate upgrade reports — FastAPI 8/10, Django 9/10 (both ≥ 8/10 clean-cut gate) | [`docs/m8b-upgrade-reports/`](./m8b-upgrade-reports/) — reports verbatim + `SUMMARY.md` synthesis; six v0.1.1 patch-line candidates and four doc-gap fixes folded into `MIGRATION-rc1-to-v0.1.0.md` + `ROADMAP.md` |
 
 ---
 

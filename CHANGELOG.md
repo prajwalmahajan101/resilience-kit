@@ -4,6 +4,10 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ## [Unreleased]
 
+### Changed (breaking inside 0.1.x)
+
+- `ResilienceSettings` now uses `extra="forbid"` at the model root: unknown top-level keys in dict-shaped inputs (Django `settings.RESILIENCE = {...}`, programmatic `model_validate(...)`, JSON configs) raise `pydantic.ValidationError` instead of being silently dropped. Catches the legacy-key footgun (`CIRCUIT_BREAKER_CONFIG`, `RATE_LIMIT_CONFIG`, `FIELD_ENCRYPTION_KEY`) that the M7 boilerplate migration was about to import verbatim. Strictness on unknown `RESILIENCE_*` env vars is **not** included — pydantic-settings filters them at the source layer; tracked as a follow-up.
+
 ## [0.1.0rc1] - 2026-06-10
 
 First public release candidate. Cut to PyPI as a packaging smoke-test before the M7 boilerplate migration. Pre-release per [PEP 440](https://peps.python.org/pep-0440/) — `pip` will not install it without an explicit version pin or `--pre`. The 0.1.0 final ships at M8b after both boilerplates depend on the kit.

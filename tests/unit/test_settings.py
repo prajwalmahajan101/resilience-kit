@@ -14,9 +14,7 @@ from resilience_kit.settings import ResilienceSettings
 
 def test_unknown_top_level_key_raises() -> None:
     with pytest.raises(ValidationError) as exc_info:
-        ResilienceSettings.model_validate(
-            {"backend": "memory", "some_future_field": "oops"}
-        )
+        ResilienceSettings.model_validate({"backend": "memory", "some_future_field": "oops"})
     assert "some_future_field" in str(exc_info.value)
 
 
@@ -24,9 +22,7 @@ def test_typo_in_nested_key_path_raises() -> None:
     # The user *meant* `defaults.retry.max_attempts` but typo'd at the root.
     # extra="forbid" catches the misspelled top-level key.
     with pytest.raises(ValidationError) as exc_info:
-        ResilienceSettings.model_validate(
-            {"deafults": {"retry": {"max_attempts": 10}}}
-        )
+        ResilienceSettings.model_validate({"deafults": {"retry": {"max_attempts": 10}}})
     assert "deafults" in str(exc_info.value)
 
 
@@ -49,7 +45,5 @@ def test_known_keys_still_load() -> None:
 
 
 def test_known_nested_dict_still_loads() -> None:
-    settings = ResilienceSettings.model_validate(
-        {"defaults": {"retry": {"max_attempts": 7}}}
-    )
+    settings = ResilienceSettings.model_validate({"defaults": {"retry": {"max_attempts": 7}}})
     assert settings.defaults.retry.max_attempts == 7

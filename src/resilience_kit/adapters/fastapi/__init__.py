@@ -7,12 +7,14 @@ that adopters consume; internal helpers stay private.
 
 from __future__ import annotations
 
+from resilience_kit.adapters.fastapi.exception_handlers import install as install_exception_handlers
 from resilience_kit.adapters.fastapi.lifespan import (
     install_health_routes,
     resilience_lifespan,
 )
 
 __all__ = [
+    "install_exception_handlers",
     "install_health_routes",
     "resilience_lifespan",
 ]

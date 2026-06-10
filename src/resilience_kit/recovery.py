@@ -162,7 +162,13 @@ class RecoveryMonitor:
         with self._lock:
             if self._task is not None and not self._task.done():
                 return
-            self._stopping.clear()
+            # Reassign rather than .clear() so the Event binds to the
+            # *current* event loop. asyncio.Event lazily binds to
+            # whatever loop first calls .wait()/.set() on it; reusing
+            # the prior Event across loops (test harness, restarted
+            # server) raises ``RuntimeError: bound to a different event
+            # loop``. A fresh Event has no binding yet.
+            self._stopping = asyncio.Event()
             self._task = asyncio.create_task(self._run(), name="resilience_kit.recovery_monitor")
         _logger.info("RecoveryMonitor started.")
 

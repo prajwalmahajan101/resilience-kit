@@ -93,6 +93,10 @@ default = "resilience_kit.audit.sanitizers:DefaultRedactor"
 noop = "resilience_kit.metrics:NoopMetricsSink"
 stdlib_logging = "resilience_kit.metrics:StdlibLoggingMetricsSink"
 
+# Intentionally empty — extension hook for third-party `SettingsSource`
+# implementations (LLD §3, ADR 0004). Third parties register a provider
+# here; the kit ships its own pydantic-v2-from-env source via
+# `runtime.SettingsSource` directly, not through this group.
 [project.entry-points."resilience_kit.settings_sources"]
 
 [tool.hatch.version]

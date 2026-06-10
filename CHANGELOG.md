@@ -8,6 +8,15 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 - `ResilienceSettings` now uses `extra="forbid"` at the model root: unknown top-level keys in dict-shaped inputs (Django `settings.RESILIENCE = {...}`, programmatic `model_validate(...)`, JSON configs) raise `pydantic.ValidationError` instead of being silently dropped. Catches the legacy-key footgun (`CIRCUIT_BREAKER_CONFIG`, `RATE_LIMIT_CONFIG`, `FIELD_ENCRYPTION_KEY`) that the M7 boilerplate migration was about to import verbatim. Strictness on unknown `RESILIENCE_*` env vars is **not** included — pydantic-settings filters them at the source layer; tracked as a follow-up.
 
+### Fixed
+
+- `EncryptedCharField.from_db_value` (Django adapter) and `EncryptedString.process_result_value` (FastAPI/SQLAlchemy adapter) now coerce `bytes` / `bytearray` inputs to `str` before handing them to `FernetCipher.decrypt`. Previously a `bytes` cipher round-trip from a custom driver, raw query, or non-default encoding raised `AttributeError` inside `FernetCipher.decrypt` (which calls `.encode("ascii")`). `None` and `str` continue to pass through unchanged. ISSUE-003.
+
+### Documentation
+
+- `_providers.py` docstring and `docs/LLD.md` §3 now document that third-party entry points shadow same-named kit builtins by design (drop-in replacement use case) and that this is a footgun for accidental name collisions — operators should namespace third-party backend names. Cross-linked from [ADR 0004](./docs/adr/0004-entry-points-for-third-party-backends.md). ISSUE-005.
+- `pyproject.toml`: the empty `[project.entry-points."resilience_kit.settings_sources"]` group now carries an inline comment explaining it is an intentional extension hook (LLD §3) so a future "remove dead config" pass doesn't strip it. ISSUE-004.
+
 ### Documentation — M7 dogfooding patterns (no behavior change)
 
 - `docs/MIGRATION-from-boilerplate-embedded.md` §10 — new "Patterns from the M7 dogfooding reports" section covering the four traps the FastAPI + Django boilerplate migrations hit on the fly: the `BaseCustomError(ResilienceKitError)` exception-bridge pattern, the two-handler envelope-collision footgun, request-id `ContextVar` interop, the provider-API rename table, and the operator env-var translation table. **Operator action required before promoting any v0.1.0 migration past staging** — audit every `.env*` file against the env-var translation table in §10.5; the kit does not read the legacy `RATE_LIMIT_*` / `CIRCUIT_BREAKER_*` / `FIELD_ENCRYPTION_KEY` names.

@@ -173,21 +173,38 @@ design — please don't open a PR to "fix" it.
 
 ## M7 — Boilerplate migrations 🟥
 
-**Goal.** Both boilerplates depend on the kit; embedded code deleted; their CI green.
+**Goal.** Both boilerplates depend on the kit; embedded code deleted; their local test suites green.
+
+**Sequencing.** FastAPI first, then Django — lessons feed the Django PR and the
+migration doc. Boilerplates pin against `git+ssh://…@milestone/m7-rc1` during
+M7; re-pinned to `prajwal-resilience-kit==0.1.0` at M8.
 
 **Features.**
+- This repo (`feat/m7-boilerplate-migrations` branch):
+  - `docs/MIGRATION-from-boilerplate-embedded.md` — install, deletion + import-rewrite table per module, settings translation (`CIRCUIT_BREAKER_CONFIG` / `RATE_LIMIT_CONFIG` / `FIELD_ENCRYPTION_KEY` / Valkey URLs → `RESILIENCE_*`), FastAPI lifespan diff, Django `INSTALLED_APPS`/`MIDDLEWARE`/`RESILIENCE` diff, DRF throttle swap, `EncryptedCharField`/`EncryptedString` swap, test-suite delta.
+  - Tag `milestone/m7-rc1` so boilerplates have a stable pin (dev checkpoint, not a release — see Tagging convention above).
 - Branch `feat/depend-on-resilience-kit` in `fastapi_boilerplate`:
-  - Delete `src/core/resilience/`, `src/core/api_log/`, `src/core/utils/{ssrf,crypto}.py`, `src/core/utils/http_client/`, `src/core/middleware/{request_id,body_limit,security_headers,selective_cors,rate_limit_headers,exception_logging}.py`, `src/core/lifecycle/healthcheck.py`, `src/core/metrics.py`, `src/core/tasks/`, `src/core/dispatch/`, `src/core/testing/reset.py`, `src/core/utils/{log_sanitization,function_logger,network,timing,data,fire_and_forget}.py`.
-  - Add `prajwal-resilience-kit[fastapi,redis,http,crypto,audit-postgres]` to `requirements/base.txt`.
+  - Delete: `src/core/resilience/`, `src/core/api_log/`, `src/core/utils/{ssrf,crypto,log_sanitization,function_logger,network,timing,data,fire_and_forget}.py`, `src/core/utils/http_client/`, `src/core/middleware/{request_id,body_limit,security_headers,selective_cors,rate_limit_headers,exception_logging}.py`, `src/core/lifecycle/healthcheck.py`, `src/core/metrics.py`, `src/core/testing/reset.py`.
+  - **Keep**: `src/core/tasks/` (Celery wrapper — out of scope for M7; the kit's `tasks/` is a lightweight in-process queue for its own audit dispatcher, not a Celery replacement). `src/core/dispatch/` does not exist in this repo.
+  - **Keep** `src/core/exceptions/` as the boilerplate's domain layer; replace its infra exception classes with re-exports from `resilience_kit.exceptions` where they overlap.
+  - Add `prajwal-resilience-kit[fastapi,redis,http,crypto,audit-postgres] @ git+ssh://…@milestone/m7-rc1` to `requirements/base.in`; `pip-compile`.
   - Rewrite imports: `from src.core.resilience import resilient` → `from resilience_kit import resilient`, etc.
-  - Replace lifespan setup with `resilience_kit.adapters.fastapi.lifespan`.
+  - Replace lifespan setup with `resilience_kit.adapters.fastapi.resilience_lifespan` composed around the boilerplate's DB-engine + repository init.
   - Run existing test suite; fix any drift.
-- Branch `feat/depend-on-resilience-kit` in `django_boilerplate`: equivalent deletions + import rewrites + DRF throttle class swap + `EncryptedCharField` import swap.
+- Branch `feat/depend-on-resilience-kit` in `django_boilerplate`:
+  - Delete: `apps/core/resilience/`, `apps/core/api_log/`, `apps/core/utils/{crypto,log_sanitization,function_logger,network,timing,data}.py`, `apps/core/utils/http_client/`, `apps/core/middleware/{request_id,body_limit,security_headers,selective_cors,rate_limit_headers,exception_logging}.py`, `apps/core/lifecycle/healthcheck.py`, `apps/core/metrics.py`, `apps/core/tasks/`, `apps/core/dispatch/fire_and_forget.py`, `apps/core/testing/reset.py`, `apps/core/runtime.py`, `apps/core/resilience/throttles/drf_impl.py`.
+  - **Keep**: boilerplate-specific middleware (`request_logging`, `throttling`, `metrics_middleware`) — not in the kit's deletion set.
+  - **Partial** `apps/core/exceptions/`: gut `{infrastructure,rate_limit,validation,repository}.py` → re-export from `resilience_kit.exceptions`. **Keep** `auth.py`, `api.py`, `handler.py`, `utils.py` as boilerplate domain.
+  - `INSTALLED_APPS += ["resilience_kit.adapters.django"]`; MIDDLEWARE swap to `resilience_kit.adapters.django.middleware.*`; add `RESILIENCE = {...}` dict (consumed by `DjangoSettingsSource`); delete legacy `CIRCUIT_BREAKER_CONFIG` / `RATE_LIMIT_CONFIG` / `FIELD_ENCRYPTION_KEY` overlays.
+  - Remove `_start_recovery_monitor` from `apps/core/apps.py` — kit's `ResilienceConfig.ready()` owns it.
+  - DRF throttle class swap (`UserTierThrottle`, `BurstThrottle`, `EndpointThrottle`, `IPThrottle`, `AuthThrottle` from `resilience_kit.adapters.django.drf_throttles`).
+  - `EncryptedCharField` import swap (re-export from `resilience_kit.adapters.django.fields`).
+  - DRF `EXCEPTION_HANDLER` → `resilience_kit.adapters.django.exception_handler.handle`.
+  - Delete boilerplate's `resilience_status` / `resilience_reset` management commands (kit ships them).
 - One PR each, linked from the kit's v0.1.0 release notes.
-- `docs/MIGRATION-from-boilerplate-embedded.md` in this repo: section per module deleted, before/after import diffs, settings translation table.
-- Verify: both boilerplates' CI green; sample apps still boot and pass smoke tests; deployment configs unchanged.
+- Verify: both boilerplates' local `pytest` + `pre-commit` green; sample apps still boot and pass smoke tests; deployment configs unchanged. **Note:** neither boilerplate currently has `.github/workflows/`; standing up CI is a follow-up chore PR, not part of M7.
 
-**Exit when.** Both PRs open with green CI; embedded `core/resilience/` and friends are gone from both repos.
+**Exit when.** Both PRs open with green local test runs; embedded `core/resilience/` and friends are gone from both repos. Tag `milestone/m7` on this repo's `main` after both boilerplate PRs merge.
 
 ---
 

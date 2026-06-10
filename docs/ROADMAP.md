@@ -229,8 +229,52 @@ M7; re-pinned to `resilience-kit==0.1.0` at M8.
 
 ## Beyond v0.1 (parking lot)
 
-- **v0.2** — Flask adapter, Celery adapter (`task_retry_policy` decorator that composes with Celery's own retry).
-- **v0.3** — Litestar adapter; `resilience_kit doctor` CLI that scans a project for unprotected outbound calls.
-- **v0.4** — Sphinx + `mkdocs-material` docs site under `resilience-kit.dev` or GitHub Pages.
-- **Maybe** — `pyo3`-built hot-path primitives if the pure-Python breaker becomes a bottleneck under load (unlikely; flagged for measurement post-release).
-- **Maybe** — Memcached, ScyllaDB, DynamoDB backends as separate `rk-*` packages (third-party shape).
+Items below come from two streams: the original v0.1 design that explicitly punted things (Flask + Celery adapters, doctor CLI, Sphinx docs), and the M7 boilerplate dogfooding reports that surfaced ergonomic + operational gaps too large to retrofit into 0.1.x. Items tagged **[dogfooding]** trace back to a specific finding in the FastAPI / Django M7 integration reports; treat them as evidence-backed, not aspirational. Version targets are aspirational — items move forward when an adopter asks for them, not on a fixed cadence.
+
+### v0.1.x patch line — additive, non-breaking
+
+Cut as needed during v0.1.0 → v0.2.0. Single-feature minor versions; no API removals.
+
+- **`reset_all_singletons_async()`** — async-def shim alongside the sync `reset_all_singletons()` so test harnesses that previously used `async def` keep their signature without a `to_thread` wrapper. ~10 LOC. **[dogfooding]** FastAPI report §3.3.
+- **`from_exception(exc, *, envelope_cls=None)`** — kit-side helper that builds a JSONResponse from a `ResilienceKitError`, optionally re-shaped through a caller-supplied envelope class. Lets adopters keep their existing `{success, message, data, errors, request_id}` wire shape without re-implementing the handler. ~30 LOC. **[dogfooding]** FastAPI report §0.2 + Report-2 §wishlist-4.
+- **`AuthType` deprecation shim** — re-export the legacy `AuthType` enum name from `http_client.auth` with a `DeprecationWarning` for one minor cycle so the M7 codemod path is graceful for repos still on the enum dispatch pattern. ~15 LOC. **[dogfooding]** FastAPI report §3.8 + Report-2 §wishlist-7.
+
+### v0.2 — adopter ergonomics
+
+Theme: close the three biggest "needed this in production at any scale" gaps the FastAPI dogfooding flagged. Each is small in code but high in noticeable-friction-eliminated.
+
+- **FastAPI health-check routers in `adapters/fastapi`** — `create_health_router()` / `create_readiness_router()` factories that mount `/healthz` + `/readyz` with per-backend probe rows. Every adopter hand-rolls ~80 LOC of this today. **[dogfooding]** FastAPI report §3.7 + Report-2 §wishlist-1 (highest impact).
+- **`MetricsSink` cardinality contract** — promote the boilerplate's `_assert_bounded` pattern (~80 LOC) into either a `BoundedMetricsSink` decorator or a Protocol upgrade with a `cardinality_budget: int` knob. The current "log this dict" `MetricsSink` shape is the single biggest production-risk regression in v0.1 — the first time someone slips a `request_id` label past code review, Prometheus explodes. **[dogfooding]** FastAPI report §3.6 + Report-2 §lost-3 + Report-2 §wishlist-2.
+- **`bind_to(consumer_ctxvar)` helper** on `resilience_kit.context.request_id` — first-class story for adopters who keep their own request-id ContextVar (every existing FastAPI / Django boilerplate does). Eliminates the silent-null-correlation footgun the FastAPI dogfooding hit on commit 1. **[dogfooding]** FastAPI report §0.1 + Report-2 §wishlist-5.
+- **Flask adapter** — same shape as fastapi / django: `install_middleware_stack`, `install_exception_handlers`, lifespan-equivalent via Flask app factory hooks.
+- **Celery adapter** — `@task_retry_policy(...)` decorator that composes with Celery's own retry, plus `adapters/celery` lifespan that owns the recovery monitor inside a Celery worker process.
+- **`tasks.local_queue` rename** (or namespace hint) — disambiguate the kit's in-process `tasks.queue` / `tasks.registry` from Celery-style task names, which Django/FastAPI boilerplates already use under the same identifier. **[dogfooding]** FastAPI report §3.12. **Breaking inside v0.2**; ship an alias module for one release.
+
+### v0.3 — operational depth
+
+Theme: the ops-team knobs and richer shapes that v0.1 deliberately narrowed.
+
+- **Multi-alias Redis support** — `redis_urls: dict[str, str]` (or per-subsystem `RESILIENCE_<sub>__REDIS_URL` env keys) so cache / throttle / breaker / audit can run on separate Redis instances. Real high-throughput shops need this; both M7 boilerplates lost the named-alias dict in the migration. **[dogfooding]** FastAPI report §3.4 + Report-2 §lost-1 + Report-2 §wishlist-3.
+- **`HTTPAuditEvent` subclass** — richer audit shape extending `AuditEvent` with separate `request_headers` / `request_body` / `response_status` / `response_body_redacted` / `ttl_expires_at` / `environment` columns. Lets HTTP services upgrade off the generic `payload: Mapping` without forking the dispatcher. The M7 boilerplates explicitly chose to keep their own audit pipeline rather than downgrade to v0.1's shape — this closes the gap. **[dogfooding]** FastAPI report §1.audit + Report-2 §lost-4 + Report-2 §wishlist-6.
+- **`AsyncFernetCipher`** — async surface mirroring the sync class so adopters stop wrapping in `asyncio.to_thread`. Same key-derivation + env-guard rules as the sync class. **[dogfooding]** Report-2 §wishlist-8.
+- **`backend_name` + `reset_backend(alias)` surgical-reset API** — restore the diagnostic + targeted-reset capability the boilerplate had (`"show me what's actually running"` + manual reset on a single backend without touching the rest). Expose via the registry, mirror through both adapters' management commands. **[dogfooding]** Report-2 §lost-2.
+- **Litestar adapter** — same surface as fastapi.
+- **`resilience_kit doctor` CLI** — scans a project for unprotected outbound calls (no `@resilient` on a function that does HTTP), unbounded metric labels (catches what v0.2's cardinality contract gates at runtime), and legacy env-var names that survived the M7 migration.
+
+### v0.4 — visibility
+
+- **Sphinx + `mkdocs-material` docs site** under `resilience-kit.dev` (or GitHub Pages until DNS lands). Replaces the `docs/` markdown tree as the canonical reference; the markdown stays for in-repo browsing + greppability.
+
+### Maybe (no version target)
+
+- **`pyo3`-built hot-path primitives** if the pure-Python breaker becomes a bottleneck under load. Unlikely; flagged for measurement post-release.
+- **Memcached / ScyllaDB / DynamoDB backends** as separate `rk-*` packages (third-party shape, not in-kit — exercises the ADR 0004 entry-point precedence guarantee in production).
+- **First-class envelope-override hook** — superset of v0.1.x `from_exception(...)` that lets adopters register their `{success, message, data, errors, request_id}` envelope class once at startup and have every kit handler use it automatically. Land in v0.2 if the v0.1.x patch-level helper isn't ergonomic enough.
+
+### Maintenance lines
+
+Always-on commitments that don't need a version slot:
+
+- **Dependabot** runs weekly across actions + Python deps; security patches merge on the same day they're filed.
+- **CHANGELOG `[Unreleased]`** gets a one-line entry for every user-visible change, no exceptions, so each `vX.Y.Z` cut has notes ready.
+- **Boilerplate dogfooding pin** — kit and both boilerplates re-test their integration on every kit minor (`v0.2.0`, `v0.3.0`, …) before the kit's tag is pushed.

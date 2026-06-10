@@ -45,3 +45,14 @@ def reset_all_singletons() -> None:
     reset_dispatcher()
     reset_tasks()
     reset_task_registry()
+
+
+async def reset_all_singletons_async() -> None:
+    """Async ergonomic wrapper around :func:`reset_all_singletons`.
+
+    The underlying call is non-blocking, so no thread is spawned and no
+    ``await`` happens internally. Exists purely so async test harnesses
+    (``pytest-asyncio``, ``pytest-trio``) can call it inline instead of
+    wrapping every invocation in ``asyncio.to_thread``.
+    """
+    reset_all_singletons()

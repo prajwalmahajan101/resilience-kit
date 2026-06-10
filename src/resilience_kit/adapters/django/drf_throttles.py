@@ -27,7 +27,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
-from resilience_kit.exceptions import MissingExtraError
+from resilience_kit.exceptions import MissingExtraError, RateLimitError
 from resilience_kit.throttle.base import Rate
 from resilience_kit.throttle.provider import get_throttle
 from resilience_kit.throttle.scopes import Scope, build_key
@@ -73,18 +73,29 @@ class _KitThrottle(BaseThrottle):  # type: ignore[misc]  # rest_framework untype
         self._retry_after: float = 0.0
 
     def allow_request(self, request: Request, view: APIView) -> bool:
-        """Return ``True`` if the request fits the budget for this scope."""
+        """Return ``True`` on allow; raise :class:`RateLimitError` on deny.
+
+        Raising rather than returning False routes the deny through the
+        kit's exception handler so the LLD §11 envelope + the canonical
+        ``X-RateLimit-*`` headers reach the client. DRF's own
+        :class:`Throttled` exception is bypassed.
+        """
         attrs = self._attrs(request, view)
         key = build_key(self.scope, attrs)
         decision = asyncio.run(get_throttle().check(key, self._parsed_rate))
         if not decision.allowed:
-            self._retry_after = decision.reset_after
-            return False
+            raise RateLimitError(
+                limit=decision.limit,
+                remaining=decision.remaining,
+                reset_at=decision.reset_at,
+                retry_after=decision.reset_after,
+                scope=self.scope.value,
+            )
         return True
 
     def wait(self) -> float | None:
-        """Return seconds to wait, or ``None`` when the throttle just allowed."""
-        return self._retry_after if self._retry_after > 0 else None
+        """Unused — :meth:`allow_request` raises instead of returning False."""
+        return None
 
     def _attrs(
         self,

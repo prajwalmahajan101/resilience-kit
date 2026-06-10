@@ -27,7 +27,7 @@ __all__ = ["postgres_container"]
 @pytest.fixture(scope="session")
 def django_db_setup() -> None:
     """Override pytest-django's automatic DB creation — we manage it ourselves."""
-    return None
+    return
 
 
 @pytest.fixture(scope="session")

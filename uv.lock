@@ -1057,125 +1057,6 @@ wheels = [
 ]
 
 [[package]]
-name = "prajwal-resilience-kit"
-source = { editable = "." }
-dependencies = [
-    { name = "pybreaker" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "asyncpg" },
-    { name = "cryptography" },
-    { name = "django", version = "5.2.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "django", version = "6.0.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "djangorestframework" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "redis" },
-    { name = "requests" },
-    { name = "sqlalchemy" },
-    { name = "starlette" },
-]
-audit-postgres = [
-    { name = "asyncpg" },
-]
-crypto = [
-    { name = "cryptography" },
-]
-django = [
-    { name = "django", version = "5.2.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "django", version = "6.0.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "djangorestframework" },
-]
-fastapi = [
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "sqlalchemy" },
-    { name = "starlette" },
-]
-http = [
-    { name = "httpx" },
-]
-redis = [
-    { name = "redis" },
-]
-requests = [
-    { name = "requests" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "darglint" },
-    { name = "hypothesis" },
-    { name = "import-linter" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pydocstyle" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-cov" },
-    { name = "pytest-django" },
-    { name = "ruff" },
-]
-test-integration = [
-    { name = "psycopg", extra = ["binary"] },
-    { name = "testcontainers", extra = ["redis"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "asyncpg", marker = "extra == 'all'", specifier = ">=0.29" },
-    { name = "asyncpg", marker = "extra == 'audit-postgres'", specifier = ">=0.29" },
-    { name = "cryptography", marker = "extra == 'all'", specifier = ">=42.0" },
-    { name = "cryptography", marker = "extra == 'crypto'", specifier = ">=42.0" },
-    { name = "django", marker = "extra == 'all'", specifier = ">=4.2,<7" },
-    { name = "django", marker = "extra == 'django'", specifier = ">=4.2,<7" },
-    { name = "djangorestframework", marker = "extra == 'all'", specifier = ">=3.14" },
-    { name = "djangorestframework", marker = "extra == 'django'", specifier = ">=3.14" },
-    { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.110" },
-    { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.110" },
-    { name = "httpx", marker = "extra == 'all'", specifier = ">=0.27,<0.29" },
-    { name = "httpx", marker = "extra == 'fastapi'", specifier = ">=0.27,<0.29" },
-    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.27,<0.29" },
-    { name = "pybreaker", specifier = ">=1.2" },
-    { name = "pydantic", specifier = ">=2.6" },
-    { name = "pydantic-settings", specifier = ">=2.2" },
-    { name = "redis", marker = "extra == 'all'", specifier = ">=5.0" },
-    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0" },
-    { name = "requests", marker = "extra == 'all'", specifier = ">=2.31" },
-    { name = "requests", marker = "extra == 'requests'", specifier = ">=2.31" },
-    { name = "sqlalchemy", marker = "extra == 'all'", specifier = ">=2.0" },
-    { name = "sqlalchemy", marker = "extra == 'fastapi'", specifier = ">=2.0" },
-    { name = "starlette", marker = "extra == 'all'", specifier = ">=0.36" },
-    { name = "starlette", marker = "extra == 'fastapi'", specifier = ">=0.36" },
-]
-provides-extras = ["all", "audit-postgres", "crypto", "django", "fastapi", "http", "redis", "requests"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "darglint", specifier = ">=1.8" },
-    { name = "hypothesis", specifier = ">=6.100" },
-    { name = "import-linter", specifier = ">=2.0" },
-    { name = "mypy", specifier = ">=1.10" },
-    { name = "pre-commit", specifier = ">=3.7" },
-    { name = "pydocstyle", specifier = ">=6.3" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23" },
-    { name = "pytest-benchmark", specifier = ">=4.0" },
-    { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "pytest-django", specifier = ">=4.12.0" },
-    { name = "ruff", specifier = ">=0.6" },
-]
-test-integration = [
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
-    { name = "testcontainers", extras = ["redis", "postgresql"], specifier = ">=4.7" },
-]
-
-[[package]]
 name = "pre-commit"
 version = "4.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1631,6 +1512,125 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz", hash = "sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed", size = 142856, upload-time = "2026-05-14T19:25:27.735Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
+]
+
+[[package]]
+name = "resilience-kit"
+source = { editable = "." }
+dependencies = [
+    { name = "pybreaker" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "asyncpg" },
+    { name = "cryptography" },
+    { name = "django", version = "5.2.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "django", version = "6.0.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "djangorestframework" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "redis" },
+    { name = "requests" },
+    { name = "sqlalchemy" },
+    { name = "starlette" },
+]
+audit-postgres = [
+    { name = "asyncpg" },
+]
+crypto = [
+    { name = "cryptography" },
+]
+django = [
+    { name = "django", version = "5.2.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "django", version = "6.0.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "djangorestframework" },
+]
+fastapi = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "sqlalchemy" },
+    { name = "starlette" },
+]
+http = [
+    { name = "httpx" },
+]
+redis = [
+    { name = "redis" },
+]
+requests = [
+    { name = "requests" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "darglint" },
+    { name = "hypothesis" },
+    { name = "import-linter" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pydocstyle" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-benchmark" },
+    { name = "pytest-cov" },
+    { name = "pytest-django" },
+    { name = "ruff" },
+]
+test-integration = [
+    { name = "psycopg", extra = ["binary"] },
+    { name = "testcontainers", extra = ["redis"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncpg", marker = "extra == 'all'", specifier = ">=0.29" },
+    { name = "asyncpg", marker = "extra == 'audit-postgres'", specifier = ">=0.29" },
+    { name = "cryptography", marker = "extra == 'all'", specifier = ">=42.0" },
+    { name = "cryptography", marker = "extra == 'crypto'", specifier = ">=42.0" },
+    { name = "django", marker = "extra == 'all'", specifier = ">=4.2,<7" },
+    { name = "django", marker = "extra == 'django'", specifier = ">=4.2,<7" },
+    { name = "djangorestframework", marker = "extra == 'all'", specifier = ">=3.14" },
+    { name = "djangorestframework", marker = "extra == 'django'", specifier = ">=3.14" },
+    { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.110" },
+    { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.110" },
+    { name = "httpx", marker = "extra == 'all'", specifier = ">=0.27,<0.29" },
+    { name = "httpx", marker = "extra == 'fastapi'", specifier = ">=0.27,<0.29" },
+    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.27,<0.29" },
+    { name = "pybreaker", specifier = ">=1.2" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pydantic-settings", specifier = ">=2.2" },
+    { name = "redis", marker = "extra == 'all'", specifier = ">=5.0" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0" },
+    { name = "requests", marker = "extra == 'all'", specifier = ">=2.31" },
+    { name = "requests", marker = "extra == 'requests'", specifier = ">=2.31" },
+    { name = "sqlalchemy", marker = "extra == 'all'", specifier = ">=2.0" },
+    { name = "sqlalchemy", marker = "extra == 'fastapi'", specifier = ">=2.0" },
+    { name = "starlette", marker = "extra == 'all'", specifier = ">=0.36" },
+    { name = "starlette", marker = "extra == 'fastapi'", specifier = ">=0.36" },
+]
+provides-extras = ["all", "audit-postgres", "crypto", "django", "fastapi", "http", "redis", "requests"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "darglint", specifier = ">=1.8" },
+    { name = "hypothesis", specifier = ">=6.100" },
+    { name = "import-linter", specifier = ">=2.0" },
+    { name = "mypy", specifier = ">=1.10" },
+    { name = "pre-commit", specifier = ">=3.7" },
+    { name = "pydocstyle", specifier = ">=6.3" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23" },
+    { name = "pytest-benchmark", specifier = ">=4.0" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "pytest-django", specifier = ">=4.12.0" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+test-integration = [
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
+    { name = "testcontainers", extras = ["redis", "postgresql"], specifier = ">=4.7" },
 ]
 
 [[package]]

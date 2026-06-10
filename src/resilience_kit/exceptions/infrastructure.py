@@ -100,7 +100,7 @@ class MissingExtraError(ResilienceKitError):
 
         Args:
             extra: Name of the pip extra (e.g. ``"redis"``).
-            install_hint: Full install string, e.g. ``"prajwal-resilience-kit[redis]"``.
+            install_hint: Full install string, e.g. ``"resilience-kit[redis]"``.
         """
         super().__init__(
             f"Optional dependency '{extra}' is not installed. "

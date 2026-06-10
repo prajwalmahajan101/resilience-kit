@@ -33,7 +33,7 @@ try:
         Request,  # noqa: TC002 — runtime use (FastAPI resolves the annotation at dependency-binding time).
     )
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("fastapi", "prajwal-resilience-kit[fastapi]") from exc
+    raise MissingExtraError("fastapi", "resilience-kit[fastapi]") from exc
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Mapping

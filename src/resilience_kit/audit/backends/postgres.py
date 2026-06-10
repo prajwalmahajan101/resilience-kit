@@ -31,7 +31,7 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise MissingExtraError(
         "audit-postgres",
-        "prajwal-resilience-kit[audit-postgres]",
+        "resilience-kit[audit-postgres]",
     ) from exc
 
 

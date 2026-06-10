@@ -98,13 +98,13 @@ not deep inside a request.
 ## Consequences
 
 - A reviewer can copy `tests/integration/fastapi_app/main.py` into a
-  fresh project, `pip install prajwal-resilience-kit[fastapi,redis,crypto,audit-postgres]`,
+  fresh project, `pip install resilience-kit[fastapi,redis,crypto,audit-postgres]`,
   and have a working app under 100 LOC of glue.
 - The LLD §11 exception → HTTP-status table now has one source
   (`exceptions.http_status_for`) shared by FastAPI, DRF (M6), and
   ASGI middleware. Future status changes are a single-file edit.
 - `EncryptedString` couples the FastAPI extra to SQLAlchemy 2.x. Apps
-  on SQLAlchemy 1.4 must pin `prajwal-resilience-kit` without the
+  on SQLAlchemy 1.4 must pin `resilience-kit` without the
   `[fastapi]` extra and hand-roll the field, or upgrade SQLAlchemy.
 - `install_middleware_stack` opts into `SelectiveCorsMiddleware` only
   when both CORS arguments are present, so the default install is

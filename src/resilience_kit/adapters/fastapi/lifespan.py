@@ -36,7 +36,7 @@ from resilience_kit.recovery import monitor
 try:
     from fastapi.responses import JSONResponse
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("fastapi", "prajwal-resilience-kit[fastapi]") from exc
+    raise MissingExtraError("fastapi", "resilience-kit[fastapi]") from exc
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable

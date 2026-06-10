@@ -16,7 +16,7 @@ from resilience_kit.registry import registry
 try:
     from django.core.management.base import BaseCommand, CommandError
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("django", "prajwal-resilience-kit[django]") from exc
+    raise MissingExtraError("django", "resilience-kit[django]") from exc
 
 
 class Command(BaseCommand):  # type: ignore[misc]

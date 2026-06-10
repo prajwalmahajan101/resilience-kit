@@ -30,7 +30,7 @@ try:
     from rest_framework.response import Response
     from rest_framework.views import exception_handler as drf_default_handler
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("django", "prajwal-resilience-kit[django]") from exc
+    raise MissingExtraError("django", "resilience-kit[django]") from exc
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

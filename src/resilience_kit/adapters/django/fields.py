@@ -19,7 +19,7 @@ from resilience_kit.exceptions import MissingExtraError
 try:
     from django.db import models
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("django", "prajwal-resilience-kit[django]") from exc
+    raise MissingExtraError("django", "resilience-kit[django]") from exc
 
 
 class EncryptedCharField(models.CharField):  # type: ignore[misc]  # django.db.models untyped

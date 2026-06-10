@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 try:
     import httpx  # noqa: TC002 — runtime use (httpx.AsyncClient, httpx.Response, httpx.Auth).
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("http", "prajwal-resilience-kit[http]") from exc
+    raise MissingExtraError("http", "resilience-kit[http]") from exc
 
 logger = logging.getLogger(__name__)
 

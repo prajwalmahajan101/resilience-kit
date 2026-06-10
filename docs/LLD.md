@@ -1,4 +1,4 @@
-# Low-Level Design — `prajwal-resilience-kit` v0.1
+# Low-Level Design — `resilience-kit` v0.1
 
 Complements [PRD.md](./PRD.md) (what & why) and [ROADMAP.md](./ROADMAP.md) (when). This document fixes the **internal contracts**: protocols, data shapes, sequence flows, concurrency model, and the settings schema. Directory layout lives in [DIRECTORY-TREE.md](./DIRECTORY-TREE.md).
 
@@ -245,7 +245,7 @@ try:
     import redis.asyncio as _redis
 except ImportError as exc:                       # pragma: no cover
     from resilience_kit.exceptions import MissingExtraError
-    raise MissingExtraError("redis", install_hint="prajwal-resilience-kit[redis]") from exc
+    raise MissingExtraError("redis", install_hint="resilience-kit[redis]") from exc
 ```
 
 ---

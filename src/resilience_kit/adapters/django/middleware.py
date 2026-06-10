@@ -54,7 +54,7 @@ from resilience_kit.middleware.security_headers import DEFAULTS as SECURITY_HEAD
 try:
     from django.http import HttpResponse, JsonResponse
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("django", "prajwal-resilience-kit[django]") from exc
+    raise MissingExtraError("django", "resilience-kit[django]") from exc
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable

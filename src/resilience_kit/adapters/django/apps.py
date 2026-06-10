@@ -41,7 +41,7 @@ from resilience_kit.recovery import monitor
 try:
     from django.apps import AppConfig
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("django", "prajwal-resilience-kit[django]") from exc
+    raise MissingExtraError("django", "resilience-kit[django]") from exc
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

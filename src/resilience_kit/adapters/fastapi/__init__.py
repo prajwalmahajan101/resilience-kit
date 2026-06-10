@@ -13,10 +13,12 @@ from resilience_kit.adapters.fastapi.lifespan import (
     install_health_routes,
     resilience_lifespan,
 )
+from resilience_kit.adapters.fastapi.middleware import install_middleware_stack
 
 __all__ = [
     "install_exception_handlers",
     "install_health_routes",
+    "install_middleware_stack",
     "rate_limit",
     "request_id_dep",
     "resilience_lifespan",

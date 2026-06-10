@@ -19,7 +19,16 @@ All notable changes to `prajwal-resilience-kit` are documented here. Format: [Ke
   - `tests/integration/fastapi_app/` — minimal example + e2e suite against `testcontainers[postgresql]`. Asserts the M5 exit gate: health routes serve 200, 3rd `/limited` returns 429 with `Retry-After`, `EncryptedString` round-trips (Fernet token on disk, plaintext through the ORM), `AsyncAPIClient` reaches a fake upstream via injected transport.
   - ADR 0010 (FastAPI adapter shape).
 <!-- m6-placeholder: feat/m6-django-adapter replaces this line -->
-- M6: Django adapter — _pending; filled by `feat/m6-django-adapter`._
+- M6: Django adapter (`resilience_kit.adapters.django`).
+  - `ResilienceConfig` AppConfig — reads `settings.RESILIENCE['services']`, registers each per-service override, and spawns a daemon thread that owns a private asyncio loop driving `recovery.monitor` for the worker lifetime. atexit hook drains the audit dispatcher + stops the monitor on graceful exit. Idempotent across Django's autoreloader.
+  - Six middleware classes mirroring the kit's ASGI stack — `RequestIdMiddleware`, `BodyLimitMiddleware`, `SecurityHeadersMiddleware`, `SelectiveCorsMiddleware`, `RateLimitHeadersMiddleware`, `ExceptionLoggingMiddleware`. Both `sync_capable` + `async_capable`; the last two implement `process_exception` so view-raised kit errors are caught regardless of WSGI / ASGI mode.
+  - Five DRF throttle classes — `IPThrottle`, `UserTierThrottle`, `EndpointThrottle`, `BurstThrottle`, `AuthThrottle`. Subclass `BaseThrottle`, derive scope-specific keys via `throttle.scopes.build_key`, delegate to `throttle.provider.get_throttle()`. Rates resolve from `RESILIENCE_THROTTLE_RATES` (Django setting), with per-scope defaults. Deny raises `RateLimitError` so the response carries the LLD §11 envelope + the canonical `X-RateLimit-*` headers rather than DRF's `Throttled` shape.
+  - `handle(exc, context)` DRF exception handler — install via `REST_FRAMEWORK['EXCEPTION_HANDLER']`. Maps every `ResilienceKitError` through `exceptions.http_status_for`; non-kit exceptions fall through to DRF's default handler.
+  - `EncryptedCharField` — Django model field mirroring the FastAPI adapter's `EncryptedString`. `get_prep_value` + `from_db_value` over `FernetCipher`. Default `max_length=512`. `None` passes through.
+  - Management commands — `resilience_status` (with `--json`) prints overall + per-backend + per-service breaker state; `resilience_reset <service|--all>` force-closes breakers.
+  - `tests/integration/django_app/` — minimal Django + DRF project + e2e suite against `testcontainers postgres:16`. Asserts the M6 exit gate: middleware echoes X-Request-Id + X-Content-Type-Options; IPThrottle('2/min') denies the 3rd request with the LLD §11 envelope + Retry-After + X-RateLimit-Limit=2; EncryptedCharField round-trips (Fernet token on disk, plaintext through the ORM); management commands run.
+  - `[dependency-groups] test-integration` gains `pytest-django` + `psycopg[binary]`.
+  - `docs/sync-vs-async.md` + ADR 0011 (Django sync/async bridge).
 
 - M4: Audit + middleware + metrics + entry-point wiring.
   - `resilience_kit.dispatch.fire_and_forget` — shared bounded queue + background worker + graceful drain. Drop-newest (default) / drop-oldest overflow with `dispatch.dropped` metric. Worker spawned in `contextvars.copy_context()` to isolate per-request pins.

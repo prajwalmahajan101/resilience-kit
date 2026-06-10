@@ -154,26 +154,41 @@ class RecoveryMonitor:
         self._lock = threading.Lock()
 
     def start(self) -> None:
-        """Spawn the background task. Idempotent.
+        """Spawn the background task. Idempotent within a single event loop.
+
+        If a task is already running on the *current* event loop, this
+        is a no-op. If a task lingers from a *previous* loop (test
+        harness reusing the singleton across pytest-asyncio per-test
+        loops, autoreloader, restarted ASGI server) the orphaned task
+        is dropped and a fresh one is created on the current loop —
+        awaiting the old task would raise
+        ``RuntimeError: attached to a different event loop``.
 
         Raises:
             RuntimeError: No running event loop is available.
         """
+        current_loop = asyncio.get_running_loop()
         with self._lock:
-            if self._task is not None and not self._task.done():
+            existing = self._task
+            if existing is not None and not existing.done() and existing.get_loop() is current_loop:
                 return
             # Reassign rather than .clear() so the Event binds to the
             # *current* event loop. asyncio.Event lazily binds to
             # whatever loop first calls .wait()/.set() on it; reusing
-            # the prior Event across loops (test harness, restarted
-            # server) raises ``RuntimeError: bound to a different event
-            # loop``. A fresh Event has no binding yet.
+            # the prior Event across loops raises
+            # ``RuntimeError: bound to a different event loop``. A
+            # fresh Event has no binding yet.
             self._stopping = asyncio.Event()
             self._task = asyncio.create_task(self._run(), name="resilience_kit.recovery_monitor")
         _logger.info("RecoveryMonitor started.")
 
     async def stop(self, timeout: float = 5.0) -> None:  # noqa: ASYNC109 — public API
         """Signal the task to stop and await it.
+
+        If the tracked task belongs to a different event loop than the
+        caller's (orphaned by test-harness loop reuse / restart) the
+        reference is simply cleared; awaiting it would raise. The dead
+        loop will garbage-collect the task on its own.
 
         Args:
             timeout: Seconds to wait before giving up and cancelling.
@@ -182,6 +197,15 @@ class RecoveryMonitor:
             task = self._task
             if task is None:
                 return
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+        if current_loop is None or task.get_loop() is not current_loop:
+            with self._lock:
+                self._task = None
+            _logger.info("RecoveryMonitor: dropped orphaned task from prior loop.")
+            return
         self._stopping.set()
         try:
             await asyncio.wait_for(task, timeout=timeout)

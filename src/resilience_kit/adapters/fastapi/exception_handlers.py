@@ -50,13 +50,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from resilience_kit.adapters._envelope import from_exception
 from resilience_kit.context import request_id
 from resilience_kit.exceptions import (
     MissingExtraError,
     RateLimitError,
     ResilienceKitError,
     ValidationError,
-    http_status_for,
 )
 
 try:
@@ -85,20 +85,15 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(RateLimitError)
     async def _on_rate_limit(_request: Request, exc: RateLimitError) -> JSONResponse:
-        return _envelope(exc, headers=exc.response_headers())
+        return _envelope(exc)
 
     @app.exception_handler(ResilienceKitError)
     async def _on_kit_error(_request: Request, exc: ResilienceKitError) -> JSONResponse:
         return _envelope(exc)
 
 
-def _envelope(
-    exc: ResilienceKitError,
-    *,
-    headers: dict[str, str] | None = None,
-) -> JSONResponse:
+def _envelope(exc: ResilienceKitError) -> JSONResponse:
     """Build the LLD §11 JSON response for ``exc``."""
-    status = http_status_for(exc)
     is_warning = isinstance(exc, (ValidationError, RateLimitError))
     severity = logging.WARNING if is_warning else logging.ERROR
     _logger.log(
@@ -112,15 +107,8 @@ def _envelope(
             "request_id": request_id.get(),
         },
     )
-    return JSONResponse(
-        {
-            "error_code": exc.error_code,
-            "message": str(exc),
-            "details": dict(exc.details),
-        },
-        status_code=status,
-        headers=headers,
-    )
+    body, status, headers = from_exception(exc)
+    return JSONResponse(body, status_code=status, headers=headers)
 
 
 __all__ = ["install"]

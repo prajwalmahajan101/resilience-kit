@@ -444,7 +444,7 @@ If you `install_exception_handlers(app)` (kit) *and* `register_exception_handler
 - **Loudest** — install **only** the kit handler and document the new envelope shape as the API contract going forward (breaking change for existing clients).
 - **Most surgical** — install a small adapter handler that catches `ResilienceKitError`, re-wraps it as a `BaseCustomError`, and re-raises. Register it *before* both handler sets. ~15 LOC, no envelope-shape break for callers, no double-handler installation.
 
-A `from_exception(exc, *, envelope_cls=None)` helper that does the third option is on the v0.1.x patch line (see [ROADMAP.md](./ROADMAP.md) "Beyond v0.1").
+**As of v0.1.0**, `resilience_kit.adapters._envelope.from_exception(exc, *, envelope_cls=None, extra_headers=None)` ships the third option as one call: pass your envelope's pydantic model, and it returns a body dict already projected onto your field names (`code` / `error_code`, `detail` / `message`, `errors` list or `details` dict, plus `request_id` and `success` if your model declares them).
 
 ### 10.3 Wire your `request_id` ContextVar to the kit's
 
@@ -454,7 +454,7 @@ The kit ships its own `resilience_kit.context.request_id: ContextVar[str | None]
 
 **Option B — bridge in a small middleware.** Install a middleware *after* the kit's `RequestIdMiddleware` that copies the kit's value into your contextvar. Lower diff churn, but you now have two contextvars carrying the same value with a one-frame copy window between them. Acceptable for short-term migrations.
 
-This was finding §0.1 of the FastAPI dogfooding report — they shipped option B as a hot-fix to unblock the PR, then converted to option A in a follow-up. A `bind_to(consumer_ctxvar)` helper that makes option B a one-line subscription is on the v0.2 ROADMAP.
+This was finding §0.1 of the FastAPI dogfooding report — they shipped option B as a hot-fix to unblock the PR, then converted to option A in a follow-up. **As of v0.1.0**, `resilience_kit.context.bind_to(target)` makes option B a one-line context manager: use it inside your own middleware to mirror the kit's `request_id` into your `request_id_ctx` for the lifetime of the request.
 
 **Symptom you'll see if you skip this step:** every log line, audit row, response envelope, and exception you raise has `request_id: null`. It's silent — no error, no warning — so verify by hitting `GET /healthz` post-migration and checking the response/log JSON for a populated `request_id`.
 
@@ -472,7 +472,7 @@ The boilerplates' resilience layer had a slightly different surface than the kit
 | `throttle.GlobalThrottle` | *(not shipped in v0.1)* | The Valkey-Lua system-wide cap is on the v0.2 ROADMAP. Until then, fronting your service with an L7 reverse proxy (`nginx limit_req`) provides the same defence layer. |
 | `AuthType` enum dispatch | `BasicAuth`, `BearerAuth`, `HMACAuth` classes | One-shot rename; a deprecation shim is on the v0.1.x patch line. |
 
-`reset_all_singletons()` is now a sync function (was `async def` in the boilerplate); if your tests used `await reset_all_singletons()`, drop the `await` or call the upcoming `reset_all_singletons_async()` shim (v0.1.x patch line).
+`reset_all_singletons()` is now a sync function (was `async def` in the boilerplate); if your tests used `await reset_all_singletons()`, drop the `await` or call `resilience_kit.testing.reset_all_singletons_async()` — the async wrapper ships in v0.1.0.
 
 ### 10.5 Operator env-var translation — required for every deployment
 
@@ -493,7 +493,7 @@ The boilerplate-shaped env-var names (`RATE_LIMIT_*`, `CIRCUIT_BREAKER_*`, `FIEL
 | `RECOVERY_PROBE_INTERVAL` | `RESILIENCE_RECOVERY__PROBE_INTERVAL_SECONDS` |
 | `AUDIT_SINK` | `RESILIENCE_AUDIT__SINK` |
 
-Audit every env file (`.env`, `.env.staging`, `.env.production`, `helm/values-*.yaml`, `terraform/secrets.tf`, etc.) before promoting the migration branch past staging. A `legacy_env_alias()` translator that maps the old names with a one-time `DeprecationWarning` is on the v0.1.x patch line, but it requires a caller-side import — it does not auto-activate.
+Audit every env file (`.env`, `.env.staging`, `.env.production`, `helm/values-*.yaml`, `terraform/secrets.tf`, etc.) before promoting the migration branch past staging. **As of v0.1.0**, `resilience_kit.runtime.legacy_env_alias()` (with the `DEFAULT_ALIASES` table covering the rows above) is the in-process bridge: call it once at the top of your settings module **before** instantiating `ResilienceSettings()` to copy legacy values onto their `RESILIENCE_*` equivalents and emit `DeprecationWarning`s. The kit-prefixed name always wins on collision. It requires a caller-side import — it does not auto-activate, so the audit is still recommended for clean state.
 
 **Crypto-key fallback warning.** The kit's `FernetCipher` refuses to start in `environment="prod"` without `RESILIENCE_CRYPTO__FIELD_ENCRYPTION_KEY`. The boilerplate's old fallback to `SECRET_KEY` is gone. Local / test environments still get the dev-key fallback; production deploys without the env var will fail at the first encrypt or decrypt call rather than silently using the wrong key.
 

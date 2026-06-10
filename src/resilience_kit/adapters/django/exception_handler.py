@@ -32,13 +32,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from resilience_kit.adapters._envelope import from_exception
 from resilience_kit.context import request_id
 from resilience_kit.exceptions import (
     MissingExtraError,
     RateLimitError,
     ResilienceKitError,
     ValidationError,
-    http_status_for,
 )
 
 try:
@@ -73,7 +73,6 @@ def handle(exc: BaseException, context: Mapping[str, Any]) -> Response | None:
 
 
 def _build_response(exc: ResilienceKitError) -> Response:
-    status = http_status_for(exc)
     severity = (
         logging.WARNING if isinstance(exc, (ValidationError, RateLimitError)) else logging.ERROR
     )
@@ -88,13 +87,8 @@ def _build_response(exc: ResilienceKitError) -> Response:
             "request_id": request_id.get(),
         },
     )
-    body = {
-        "error_code": exc.error_code,
-        "message": str(exc),
-        "details": dict(exc.details),
-    }
-    headers = exc.response_headers() if isinstance(exc, RateLimitError) else None
-    return Response(body, status=status, headers=headers)
+    body, status, headers = from_exception(exc)
+    return Response(body, status=status, headers=headers or None)
 
 
 __all__ = ["handle"]

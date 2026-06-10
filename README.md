@@ -8,7 +8,7 @@
 [![CI](https://github.com/prajwalmahajan101/resilience-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/prajwalmahajan101/resilience-kit/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** v0.1 — pre-release. **M0–M3 merged** (scaffold · in-memory primitives · Redis/pybreaker backends · HTTP client + SSRF + crypto); latest dev checkpoint is [`milestone/m3`](https://github.com/prajwalmahajan101/resilience-kit/tree/milestone/m3). M4–M8 outstanding; no PyPI release yet — the first installable version will be `v0.1.0` (see [Tagging convention](./docs/ROADMAP.md#tagging-convention)). Design is locked across four docs:
+> **Status:** [`0.1.0rc1`](https://pypi.org/project/resilience-kit/0.1.0rc1/) on PyPI (pre-release). M0–M8a complete (scaffold · primitives · Redis/Valkey + pybreaker backends · HTTP client + SSRF + crypto · audit + middleware + metrics · FastAPI + Django adapters · rc1 cut). M7 boilerplate migrations and M8b release-prep are the last gates before `v0.1.0` final (see [Tagging convention](./docs/ROADMAP.md#tagging-convention)). Design is locked across six docs:
 >
 > | Doc | What it answers |
 > |---|---|
@@ -16,6 +16,8 @@
 > | [ROADMAP.md](./docs/ROADMAP.md) | Feature-level breakdown per milestone (M0–M8) with exit gates |
 > | [LLD.md](./docs/LLD.md) | Protocols, sequence diagrams, concurrency model, settings schema |
 > | [DIRECTORY-TREE.md](./docs/DIRECTORY-TREE.md) | Every file with arrival milestone and required extra |
+> | [MIGRATION-from-boilerplate-embedded.md](./docs/MIGRATION-from-boilerplate-embedded.md) | Stepwise port from embedded `core/resilience/` to the kit |
+> | [adr/](./docs/adr/) | Numbered architecture decisions (Context / Decision / Consequences / Usage) |
 >
 > APIs marked *locked* in PRD §5.4 and LLD §2 will not break before 1.0.
 
@@ -36,11 +38,13 @@ You probably want this if you've ever:
 
 ## Install
 
+Until `v0.1.0` final ships, pin the pre-release explicitly:
+
 ```bash
-pip install resilience-kit                        # core: pure-python, no I/O deps
-pip install "resilience-kit[fastapi,redis,http]"  # FastAPI app on Valkey
-pip install "resilience-kit[django,redis,http]"   # Django app on Valkey
-pip install "resilience-kit[all]"                 # everything
+pip install resilience-kit==0.1.0rc1                        # core: pure-python, no I/O deps
+pip install "resilience-kit[fastapi,redis,http]==0.1.0rc1"  # FastAPI app on Valkey
+pip install "resilience-kit[django,redis,http]==0.1.0rc1"   # Django app on Valkey
+pip install "resilience-kit[all]==0.1.0rc1"                 # everything
 ```
 
 ### Available extras
@@ -91,19 +95,25 @@ registry.register_service("partner_api", {
 
 ```python
 from fastapi import FastAPI, Depends
-from resilience_kit.adapters.fastapi import lifespan, rate_limit, exception_handlers
+from resilience_kit.adapters.fastapi import (
+    resilience_lifespan,
+    install_exception_handlers,
+    install_middleware_stack,
+    rate_limit,
+)
 
-app = FastAPI(lifespan=lifespan)
-exception_handlers.install(app)
+app = FastAPI(lifespan=resilience_lifespan)
+install_middleware_stack(app)
+install_exception_handlers(app)
 
 @app.get("/accounts/{id}", dependencies=[Depends(rate_limit("ip", "60/min"))])
 async def read_account(id: str):
     ...
 ```
 
-- `lifespan` starts the recovery monitor and mounts `/readyz`.
+- `resilience_lifespan` starts the recovery monitor + audit dispatcher and mounts `/readyz` + `/healthz`.
 - `rate_limit(scope, rate)` is a FastAPI dependency over the kit's throttle.
-- `exception_handlers.install(app)` maps kit exceptions (`ServiceUnavailableError`, `RateLimitError`, …) to JSON responses.
+- `install_exception_handlers(app)` maps kit exceptions (`ServiceUnavailableError`, `RateLimitError`, …) to JSON responses.
 
 ## Django
 
@@ -195,6 +205,8 @@ Every swappable subsystem is a `typing.Protocol` plus a provider that resolves i
 4. A builtin (`memory`, `redis`, …).
 
 Swappable subsystems at v0.1: **cache backend · circuit-breaker backend · throttle backend · audit sink · audit sanitizer · metrics sink · settings source · clock · audit dispatcher**.
+
+A third-party entry point whose name matches a kit builtin (e.g. `memory`) shadows the builtin by design — useful for drop-in replacement, footgun for collisions. Namespace your backend names. See [ADR 0004](./docs/adr/0004-entry-points-for-third-party-backends.md) and [LLD §3](./docs/LLD.md).
 
 ### Shipping your own backend
 
@@ -304,15 +316,16 @@ async def test_throttle_under_load(redis_url):
 
 | | Milestone | Status |
 |---|---|---|
-| M0 | Repo scaffold | ⬜ pending |
-| M1 | Core primitives, in-memory only | ⬜ pending |
-| M2 | Redis/Valkey + pybreaker backends | ⬜ pending |
-| M3 | HTTP client + SSRF + crypto | ⬜ pending |
-| M4 | Audit + middleware + metrics + entry-point wiring | ⬜ pending |
-| M5 | FastAPI adapter | ⬜ pending |
-| M6 | Django adapter | ⬜ pending |
-| M7 | Boilerplate migrations | ⬜ pending |
-| M8 | v0.1.0 PyPI release | ⬜ pending |
+| M0 | Repo scaffold | ✅ shipped |
+| M1 | Core primitives, in-memory only | ✅ shipped |
+| M2 | Redis/Valkey + pybreaker backends | ✅ shipped |
+| M3 | HTTP client + SSRF + crypto | ✅ shipped |
+| M4 | Audit + middleware + metrics + entry-point wiring | ✅ shipped |
+| M5 | FastAPI adapter | ✅ shipped |
+| M6 | Django adapter | ✅ shipped |
+| M7 | Boilerplate migrations | 🟡 in progress |
+| M8a | `0.1.0rc1` on PyPI | ✅ shipped |
+| M8b | Release-prep + `v0.1.0` final | 🟡 in progress |
 
 **v0.2+** — Flask adapter · Celery adapter · Litestar adapter · `resilience_kit doctor` CLI · Sphinx site.
 
@@ -320,17 +333,15 @@ Per-milestone feature list and exit gates: [ROADMAP.md](./docs/ROADMAP.md). Fina
 
 ---
 
+## Security
+
+Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/prajwalmahajan101/resilience-kit/security/advisories/new) — full policy in [SECURITY.md](./SECURITY.md).
+
+---
+
 ## Contributing
 
-This is a portfolio project — issues and PRs welcome but I'm the only maintainer. The contract test suite under `tests/contract/` is the source of truth: any new backend must pass it, parametrized in. See [LLD.md §12](./docs/LLD.md) for the test strategy and [DIRECTORY-TREE.md](./docs/DIRECTORY-TREE.md) for where new code lands.
-
-```bash
-uv sync --all-extras --dev
-uv run pytest tests/contract -q              # contract suite, all backends
-uv run pytest tests/integration -q           # adapter + testcontainers
-uv run ruff check . && uv run ruff format --check .
-uv run mypy --strict src
-```
+Dev setup, the full local CI gate, contract-suite expectations, and the step-by-step for shipping a third-party backend live in [CONTRIBUTING.md](./CONTRIBUTING.md). The contract test suite under `tests/contract/` is the source of truth: any new backend must pass it, parametrized in.
 
 ---
 
@@ -342,6 +353,6 @@ MIT. See [LICENSE](./LICENSE).
 
 ## Related
 
-- [`prajwalmahajan101/fastapi_boilerplate`](https://github.com/prajwalmahajan101/fastapi_boilerplate) — async FastAPI starter, will depend on this kit from its next release.
-- [`prajwalmahajan101/django_boilerplate`](https://github.com/prajwalmahajan101/django_boilerplate) — Django 6 + DRF starter, ditto.
+- [`prajwalmahajan101/fastapi_boilerplate`](https://github.com/prajwalmahajan101/fastapi_boilerplate) — async FastAPI starter, depends on `resilience-kit==0.1.0rc1` as of the M7 migration PR.
+- [`prajwalmahajan101/django_boilerplate`](https://github.com/prajwalmahajan101/django_boilerplate) — Django + DRF starter, ditto.
 - Blog: *Circuit-breaker placement is different in async than sync — here's why.* (forthcoming on Hashnode)

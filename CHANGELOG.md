@@ -6,6 +6,11 @@ All notable changes to `prajwal-resilience-kit` are documented here. Format: [Ke
 
 ### Added
 
+<!-- m5-placeholder: feat/m5-fastapi-adapter replaces this line -->
+- M5: FastAPI adapter — _pending; filled by `feat/m5-fastapi-adapter`._
+<!-- m6-placeholder: feat/m6-django-adapter replaces this line -->
+- M6: Django adapter — _pending; filled by `feat/m6-django-adapter`._
+
 - M4: Audit + middleware + metrics + entry-point wiring.
   - `resilience_kit.dispatch.fire_and_forget` — shared bounded queue + background worker + graceful drain. Drop-newest (default) / drop-oldest overflow with `dispatch.dropped` metric. Worker spawned in `contextvars.copy_context()` to isolate per-request pins.
   - `resilience_kit.health.health_snapshot()` — `/readyz` aggregator that walks `recovery.registered_backends()`, runs `health_check()` in parallel with per-probe timeout, and reduces to `ok` / `degraded_but_serving` / `degraded` with the matching Kubernetes-style HTTP status.

@@ -72,8 +72,10 @@ jobs:
           /tmp/smoke/bin/python -c "import resilience_kit as rk; \
             print('version:', rk.__version__); \
             from resilience_kit import resilient, registry, http_status_for, HTTP_STATUS_MAP; \
+            from resilience_kit.exceptions import ValidationError; \
             assert callable(resilient); \
-            assert isinstance(HTTP_STATUS_MAP, dict); \
+            assert isinstance(HTTP_STATUS_MAP, tuple) and HTTP_STATUS_MAP, HTTP_STATUS_MAP; \
+            assert http_status_for(ValidationError('x')) == 400; \
             print('top-level imports OK')"
 
       - name: Upload distributions as workflow artifact

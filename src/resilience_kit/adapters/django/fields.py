@@ -51,9 +51,19 @@ class EncryptedCharField(models.CharField):  # type: ignore[misc]  # django.db.m
         expression: Any,
         connection: Any,
     ) -> Any:
-        """Decrypt ``value`` on the way out of the database."""
+        """Decrypt ``value`` on the way out of the database.
+
+        Django's CharField hands back ``str`` under normal conditions,
+        but some backends / encodings (e.g. ``BinaryField`` migrations,
+        custom drivers, raw queries) can return ``bytes``. Coerce at
+        the boundary so :meth:`FernetCipher.decrypt` — which calls
+        ``.encode("ascii")`` on its input — never raises
+        ``AttributeError``.
+        """
         if value is None:
             return None
+        if isinstance(value, (bytes, bytearray)):
+            value = bytes(value).decode("ascii")
         return FernetCipher.decrypt(value)
 
 

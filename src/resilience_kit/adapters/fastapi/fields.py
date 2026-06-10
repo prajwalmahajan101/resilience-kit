@@ -63,9 +63,19 @@ class EncryptedString(TypeDecorator[str]):
         value: Any,
         dialect: Dialect,
     ) -> str | None:
-        """Decrypt ``value`` on the way out of the database."""
+        """Decrypt ``value`` on the way out of the database.
+
+        Most SQLAlchemy dialects hand back ``str`` for ``String``
+        columns, but some (psycopg's ``bytea`` shims, asyncpg under
+        certain server encodings, raw-cursor passthroughs) return
+        ``bytes``. Coerce at the boundary so
+        :meth:`FernetCipher.decrypt` — which calls ``.encode("ascii")``
+        on its input — never raises ``AttributeError``.
+        """
         if value is None:
             return None
+        if isinstance(value, (bytes, bytearray)):
+            value = bytes(value).decode("ascii")
         return FernetCipher.decrypt(value)
 
 

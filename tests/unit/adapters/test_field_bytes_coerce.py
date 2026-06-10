@@ -47,7 +47,7 @@ def _ciphertext() -> str:
 
 def test_django_encrypted_charfield_decrypts_bytes() -> None:
     pytest.importorskip("django")
-    from resilience_kit.adapters.django.fields import EncryptedCharField
+    from resilience_kit.adapters.django.fields import EncryptedCharField  # noqa: PLC0415
 
     field = EncryptedCharField()
     cipher = _ciphertext().encode("ascii")
@@ -59,7 +59,7 @@ def test_django_encrypted_charfield_decrypts_bytes() -> None:
 
 def test_django_encrypted_charfield_decrypts_bytearray() -> None:
     pytest.importorskip("django")
-    from resilience_kit.adapters.django.fields import EncryptedCharField
+    from resilience_kit.adapters.django.fields import EncryptedCharField  # noqa: PLC0415
 
     field = EncryptedCharField()
     plaintext = field.from_db_value(
@@ -70,7 +70,7 @@ def test_django_encrypted_charfield_decrypts_bytearray() -> None:
 
 def test_django_encrypted_charfield_passes_str_through() -> None:
     pytest.importorskip("django")
-    from resilience_kit.adapters.django.fields import EncryptedCharField
+    from resilience_kit.adapters.django.fields import EncryptedCharField  # noqa: PLC0415
 
     field = EncryptedCharField()
     plaintext = field.from_db_value(_ciphertext(), expression=None, connection=None)
@@ -79,7 +79,7 @@ def test_django_encrypted_charfield_passes_str_through() -> None:
 
 def test_django_encrypted_charfield_none_passthrough() -> None:
     pytest.importorskip("django")
-    from resilience_kit.adapters.django.fields import EncryptedCharField
+    from resilience_kit.adapters.django.fields import EncryptedCharField  # noqa: PLC0415
 
     field = EncryptedCharField()
     assert field.from_db_value(None, expression=None, connection=None) is None
@@ -87,7 +87,7 @@ def test_django_encrypted_charfield_none_passthrough() -> None:
 
 def test_fastapi_encrypted_string_decrypts_bytes() -> None:
     pytest.importorskip("sqlalchemy")
-    from resilience_kit.adapters.fastapi.fields import EncryptedString
+    from resilience_kit.adapters.fastapi.fields import EncryptedString  # noqa: PLC0415
 
     col: Any = EncryptedString()
     cipher = _ciphertext().encode("ascii")
@@ -97,7 +97,7 @@ def test_fastapi_encrypted_string_decrypts_bytes() -> None:
 
 def test_fastapi_encrypted_string_passes_str_through() -> None:
     pytest.importorskip("sqlalchemy")
-    from resilience_kit.adapters.fastapi.fields import EncryptedString
+    from resilience_kit.adapters.fastapi.fields import EncryptedString  # noqa: PLC0415
 
     col: Any = EncryptedString()
     plaintext = col.process_result_value(_ciphertext(), dialect=None)
@@ -106,7 +106,7 @@ def test_fastapi_encrypted_string_passes_str_through() -> None:
 
 def test_fastapi_encrypted_string_none_passthrough() -> None:
     pytest.importorskip("sqlalchemy")
-    from resilience_kit.adapters.fastapi.fields import EncryptedString
+    from resilience_kit.adapters.fastapi.fields import EncryptedString  # noqa: PLC0415
 
     col: Any = EncryptedString()
     assert col.process_result_value(None, dialect=None) is None

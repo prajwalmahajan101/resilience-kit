@@ -29,34 +29,16 @@ from typing import TYPE_CHECKING
 
 from resilience_kit.context import request_id
 from resilience_kit.exceptions import (
-    DecryptionError,
-    ExternalServiceError,
-    ExternalTimeoutError,
     RateLimitError,
-    RepositoryError,
     ResilienceKitError,
-    ServiceUnavailableError,
     ValidationError,
+    http_status_for,
 )
 
 if TYPE_CHECKING:
     from resilience_kit.middleware._asgi import App, Receive, Scope, Send
 
 _logger = logging.getLogger("resilience_kit.exception_logging")
-
-
-# LLD §11 — locked at v0.1. Order matters: most specific class first so
-# isinstance() resolution lands on the narrower mapping when subclasses
-# overlap (e.g. ExternalTimeoutError is also a TransientError).
-_HTTP_MAP: tuple[tuple[type[ResilienceKitError], int], ...] = (
-    (ValidationError, 400),
-    (RateLimitError, 429),
-    (ServiceUnavailableError, 503),
-    (ExternalTimeoutError, 504),
-    (ExternalServiceError, 502),
-    (DecryptionError, 500),
-    (RepositoryError, 500),
-)
 
 
 class ExceptionLoggingMiddleware:
@@ -83,13 +65,6 @@ class ExceptionLoggingMiddleware:
             await _respond_generic_500(send)
 
 
-def _status_for(exc: ResilienceKitError) -> int:
-    for cls, status in _HTTP_MAP:
-        if isinstance(exc, cls):
-            return status
-    return 500
-
-
 def _severity_for(exc: ResilienceKitError) -> int:
     if isinstance(exc, (ValidationError, RateLimitError)):
         return logging.WARNING
@@ -97,7 +72,7 @@ def _severity_for(exc: ResilienceKitError) -> int:
 
 
 async def _respond_kit_error(exc: ResilienceKitError, send: Send) -> None:
-    status = _status_for(exc)
+    status = http_status_for(exc)
     _logger.log(
         _severity_for(exc),
         "%s: %s",

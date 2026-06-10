@@ -24,7 +24,7 @@ so DRF's existing handlers for :class:`ValidationError`,
    the *exception bridge*: make your ``BaseCustomError`` inherit from
    :class:`~resilience_kit.exceptions.ResilienceKitError` and keep your
    existing handler installed. See
-   ``docs/MIGRATION-from-boilerplate-embedded.md`` §10.1–§10.2.
+   ``docs/MIGRATION-from-boilerplate-embedded.md`` §10.1-§10.2.
 """
 
 from __future__ import annotations

@@ -25,6 +25,7 @@ from resilience_kit._version import __version__
 from resilience_kit.audit import AuditEvent, log_inbound, log_outbound
 from resilience_kit.decorators import circuit_breaker, resilient
 from resilience_kit.exceptions import (
+    HTTP_STATUS_MAP,
     DecryptionError,
     ExternalServiceError,
     ExternalTimeoutError,
@@ -36,6 +37,7 @@ from resilience_kit.exceptions import (
     TransientError,
     UnknownBackendError,
     ValidationError,
+    http_status_for,
 )
 from resilience_kit.health import HealthAggregate, HealthStatus, health_snapshot
 from resilience_kit.registry import ResilienceRegistry, registry
@@ -86,6 +88,7 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "HTTP_STATUS_MAP",
     "AsyncAPIClient",
     "AuditEvent",
     "DecryptionError",
@@ -108,6 +111,7 @@ __all__ = [
     "assert_public_url",
     "circuit_breaker",
     "health_snapshot",
+    "http_status_for",
     "log_inbound",
     "log_outbound",
     "pinned",

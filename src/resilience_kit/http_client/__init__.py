@@ -1,7 +1,7 @@
 """Outbound HTTP client — SSRF + DNS-pin + breaker + retry + audit (LLD §5).
 
 Requires the ``http`` extra (``pip install
-'prajwal-resilience-kit[http]'``). Importing any submodule without
+'resilience-kit[http]'``). Importing any submodule without
 ``httpx`` installed raises :class:`~resilience_kit.exceptions.MissingExtraError`
 at import time.
 """

@@ -49,7 +49,7 @@ from resilience_kit.middleware import (
 try:
     import fastapi  # noqa: F401  extra-gate guard.
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("fastapi", "prajwal-resilience-kit[fastapi]") from exc
+    raise MissingExtraError("fastapi", "resilience-kit[fastapi]") from exc
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

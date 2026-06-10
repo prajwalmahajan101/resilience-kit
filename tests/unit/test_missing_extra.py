@@ -43,4 +43,4 @@ def test_redis_modules_raise_when_redis_missing(
     with pytest.raises(MissingExtraError) as excinfo:
         importlib.import_module(module_path)
     assert excinfo.value.extra == "redis"
-    assert "prajwal-resilience-kit[redis]" in str(excinfo.value)
+    assert "resilience-kit[redis]" in str(excinfo.value)

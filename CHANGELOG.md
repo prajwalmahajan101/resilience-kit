@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `prajwal-resilience-kit` are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/spec/v2.0.0.html).
+All notable changes to `resilience-kit` are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
@@ -21,7 +21,7 @@ First public release candidate. Cut to PyPI as a packaging smoke-test before the
   - `rate_limit(scope, rate, *, attr_from_request=None)` — FastAPI dependency factory backed by `throttle.provider.get_throttle`. Parses the rate spec once at build time; raises `RateLimitError` on deny.
   - `request_id_dep()` — returns the active `request_id` ContextVar.
   - `EncryptedString` — SQLAlchemy 2.x `TypeDecorator[str]` over `FernetCipher`; `cache_ok = True`. None passes through.
-  - `[fastapi]` extra now pulls `sqlalchemy>=2.0` and `httpx>=0.27,<0.29` so a single `pip install prajwal-resilience-kit[fastapi]` wires the whole adapter.
+  - `[fastapi]` extra now pulls `sqlalchemy>=2.0` and `httpx>=0.27,<0.29` so a single `pip install resilience-kit[fastapi]` wires the whole adapter.
   - `tests/integration/fastapi_app/` — minimal example + e2e suite against `testcontainers[postgresql]`. Asserts the M5 exit gate: health routes serve 200, 3rd `/limited` returns 429 with `Retry-After`, `EncryptedString` round-trips (Fernet token on disk, plaintext through the ORM), `AsyncAPIClient` reaches a fake upstream via injected transport.
   - ADR 0010 (FastAPI adapter shape).
 <!-- m6-placeholder: feat/m6-django-adapter replaces this line -->

@@ -45,7 +45,7 @@ from resilience_kit.runtime import get_settings
 try:
     from cryptography.fernet import Fernet, InvalidToken
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("crypto", "prajwal-resilience-kit[crypto]") from exc
+    raise MissingExtraError("crypto", "resilience-kit[crypto]") from exc
 
 logger = logging.getLogger(__name__)
 

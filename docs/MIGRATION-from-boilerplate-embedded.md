@@ -1,4 +1,4 @@
-# Migrating from embedded `core/resilience/` to `prajwal-resilience-kit`
+# Migrating from embedded `core/resilience/` to `resilience-kit`
 
 For maintainers of [`fastapi_boilerplate`](https://github.com/prajwalmahajan101/fastapi_boilerplate)
 and [`django_boilerplate`](https://github.com/prajwalmahajan101/django_boilerplate) — and anyone
@@ -19,7 +19,7 @@ During M7 (pre-PyPI), both boilerplates pin the `milestone/m7-rc1` tag:
 **FastAPI** — `requirements/base.in`:
 
 ```text
-prajwal-resilience-kit[fastapi,redis,http,crypto,audit-postgres] @ git+ssh://git@github.com/prajwalmahajan101/resilience-kit.git@milestone/m7-rc1
+resilience-kit[fastapi,redis,http,crypto,audit-postgres] @ git+ssh://git@github.com/prajwalmahajan101/resilience-kit.git@milestone/m7-rc1
 ```
 
 Then `pip-compile requirements/base.in` to refresh `base.txt`.
@@ -27,10 +27,10 @@ Then `pip-compile requirements/base.in` to refresh `base.txt`.
 **Django** — `requirements/base.in` (or `pyproject.toml` if uv-managed):
 
 ```text
-prajwal-resilience-kit[django,redis,http,crypto,audit-postgres] @ git+ssh://git@github.com/prajwalmahajan101/resilience-kit.git@milestone/m7-rc1
+resilience-kit[django,redis,http,crypto,audit-postgres] @ git+ssh://git@github.com/prajwalmahajan101/resilience-kit.git@milestone/m7-rc1
 ```
 
-At M8 the pins flip to `prajwal-resilience-kit==0.1.0` from PyPI. Per
+At M8 the pins flip to `resilience-kit==0.1.0` from PyPI. Per
 [ROADMAP §Tagging convention](./ROADMAP.md#tagging-convention), `milestone/m7-rc1`
 is a dev checkpoint and is NOT a PyPI release.
 
@@ -407,4 +407,4 @@ Before opening the boilerplate PR:
 1. Tag `milestone/m7` on the kit's `main` (dev checkpoint).
 2. Proceed to M8: version bump, CHANGELOG, PyPI publish, GitHub release.
 3. Open follow-up PRs to re-pin each boilerplate from `git+ssh://…@milestone/m7-rc1`
-   to `prajwal-resilience-kit==0.1.0`.
+   to `resilience-kit==0.1.0`.

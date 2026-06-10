@@ -24,7 +24,7 @@ except ImportError as exc:  # pragma: no cover - exercised in unit tests via sys
 
     raise MissingExtraError(
         extra="redis",
-        install_hint="prajwal-resilience-kit[redis]",
+        install_hint="resilience-kit[redis]",
     ) from exc
 
 from resilience_kit.circuit_breaker.base import (

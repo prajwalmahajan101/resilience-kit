@@ -1,7 +1,7 @@
 """Minimal FastAPI app demonstrating the kit's M5 adapter end-to-end.
 
 A reviewer should be able to copy this file into a fresh project,
-``pip install prajwal-resilience-kit[fastapi,redis,crypto,audit-postgres]``,
+``pip install resilience-kit[fastapi,redis,crypto,audit-postgres]``,
 set ``RESILIENCE_REDIS_URL`` + ``RESILIENCE_CRYPTO__FIELD_ENCRYPTION_KEY``,
 and have working resilience.
 

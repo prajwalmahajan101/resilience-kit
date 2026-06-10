@@ -1,4 +1,4 @@
-# Roadmap — `prajwal-resilience-kit` v0.1
+# Roadmap — `resilience-kit` v0.1
 
 Feature-level breakdown of the milestones from [PRD.md §8](./PRD.md). Each milestone has a goal, a concrete feature list, and an "exit when" gate. Milestones are sequential except where noted.
 
@@ -177,7 +177,7 @@ design — please don't open a PR to "fix" it.
 
 **Sequencing.** FastAPI first, then Django — lessons feed the Django PR and the
 migration doc. Boilerplates pin against `git+ssh://…@milestone/m7-rc1` during
-M7; re-pinned to `prajwal-resilience-kit==0.1.0` at M8.
+M7; re-pinned to `resilience-kit==0.1.0` at M8.
 
 **Features.**
 - This repo (`feat/m7-boilerplate-migrations` branch):
@@ -187,7 +187,7 @@ M7; re-pinned to `prajwal-resilience-kit==0.1.0` at M8.
   - Delete: `src/core/resilience/`, `src/core/api_log/`, `src/core/utils/{ssrf,crypto,log_sanitization,function_logger,network,timing,data,fire_and_forget}.py`, `src/core/utils/http_client/`, `src/core/middleware/{request_id,body_limit,security_headers,selective_cors,rate_limit_headers,exception_logging}.py`, `src/core/lifecycle/healthcheck.py`, `src/core/metrics.py`, `src/core/testing/reset.py`.
   - **Keep**: `src/core/tasks/` (Celery wrapper — out of scope for M7; the kit's `tasks/` is a lightweight in-process queue for its own audit dispatcher, not a Celery replacement). `src/core/dispatch/` does not exist in this repo.
   - **Keep** `src/core/exceptions/` as the boilerplate's domain layer; replace its infra exception classes with re-exports from `resilience_kit.exceptions` where they overlap.
-  - Add `prajwal-resilience-kit[fastapi,redis,http,crypto,audit-postgres] @ git+ssh://…@milestone/m7-rc1` to `requirements/base.in`; `pip-compile`.
+  - Add `resilience-kit[fastapi,redis,http,crypto,audit-postgres] @ git+ssh://…@milestone/m7-rc1` to `requirements/base.in`; `pip-compile`.
   - Rewrite imports: `from src.core.resilience import resilient` → `from resilience_kit import resilient`, etc.
   - Replace lifespan setup with `resilience_kit.adapters.fastapi.resilience_lifespan` composed around the boilerplate's DB-engine + repository init.
   - Run existing test suite; fix any drift.
@@ -223,7 +223,7 @@ M7; re-pinned to `prajwal-resilience-kit==0.1.0` at M8.
 - `docs/SECURITY.md` — vulnerability reporting policy.
 - `docs/CONTRIBUTING.md` — dev setup, contract-suite expectations, how to add a backend.
 
-**Exit when.** `pip install prajwal-resilience-kit==0.1.0` works for someone who has never seen this repo, against the README quickstart, in under 5 minutes.
+**Exit when.** `pip install resilience-kit==0.1.0` works for someone who has never seen this repo, against the README quickstart, in under 5 minutes.
 
 ---
 
@@ -231,6 +231,6 @@ M7; re-pinned to `prajwal-resilience-kit==0.1.0` at M8.
 
 - **v0.2** — Flask adapter, Celery adapter (`task_retry_policy` decorator that composes with Celery's own retry).
 - **v0.3** — Litestar adapter; `resilience_kit doctor` CLI that scans a project for unprotected outbound calls.
-- **v0.4** — Sphinx + `mkdocs-material` docs site under `prajwal-resilience-kit.dev` or GitHub Pages.
+- **v0.4** — Sphinx + `mkdocs-material` docs site under `resilience-kit.dev` or GitHub Pages.
 - **Maybe** — `pyo3`-built hot-path primitives if the pure-Python breaker becomes a bottleneck under load (unlikely; flagged for measurement post-release).
 - **Maybe** — Memcached, ScyllaDB, DynamoDB backends as separate `rk-*` packages (third-party shape).

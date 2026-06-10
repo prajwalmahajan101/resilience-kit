@@ -38,7 +38,7 @@ from resilience_kit.exceptions import (
 try:
     from fastapi.responses import JSONResponse
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("fastapi", "prajwal-resilience-kit[fastapi]") from exc
+    raise MissingExtraError("fastapi", "resilience-kit[fastapi]") from exc
 
 if TYPE_CHECKING:
     from fastapi import FastAPI, Request

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 try:
     import httpx
 except ImportError as exc:  # pragma: no cover
-    raise MissingExtraError("http", "prajwal-resilience-kit[http]") from exc
+    raise MissingExtraError("http", "resilience-kit[http]") from exc
 
 
 def pinned_httpx_client(**kwargs: Any) -> httpx.AsyncClient:
@@ -54,7 +54,7 @@ def pinned_requests_session() -> requests.Session:
     """Return a ``requests.Session`` that honours :data:`pinned_dns`.
 
     Requires the ``requests`` extra
-    (``pip install 'prajwal-resilience-kit[requests]'``). The session
+    (``pip install 'resilience-kit[requests]'``). The session
     mounts a transport adapter that rewrites the request URL host to one
     of the pinned IPs and sets the ``Host`` header back to the original
     hostname so the upstream routes the request correctly. TLS SNI is
@@ -73,7 +73,7 @@ def pinned_requests_session() -> requests.Session:
     except ImportError as exc:  # pragma: no cover
         raise MissingExtraError(
             "requests",
-            "prajwal-resilience-kit[requests]",
+            "resilience-kit[requests]",
         ) from exc
 
     from urllib.parse import urlparse, urlunparse  # noqa: PLC0415

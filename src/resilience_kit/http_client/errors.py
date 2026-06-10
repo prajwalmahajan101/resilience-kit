@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 try:
     import httpx
 except ImportError as exc:  # pragma: no cover - exercised by missing_extra test
-    raise MissingExtraError("http", "prajwal-resilience-kit[http]") from exc
+    raise MissingExtraError("http", "resilience-kit[http]") from exc
 
 logger = logging.getLogger(__name__)
 

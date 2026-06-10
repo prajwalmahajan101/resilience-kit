@@ -54,9 +54,9 @@ def test_rate_limit_response_headers() -> None:
 
 
 def test_missing_extra_carries_install_hint() -> None:
-    exc = MissingExtraError(extra="redis", install_hint="prajwal-resilience-kit[redis]")
+    exc = MissingExtraError(extra="redis", install_hint="resilience-kit[redis]")
     assert exc.extra == "redis"
-    assert "prajwal-resilience-kit[redis]" in str(exc)
+    assert "resilience-kit[redis]" in str(exc)
 
 
 def test_unknown_backend_lists_options() -> None:

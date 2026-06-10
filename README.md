@@ -1,10 +1,10 @@
-# prajwal-resilience-kit
+# resilience-kit
 
 > Framework-agnostic Python resilience + core-infrastructure kernel.
 > Retries, circuit breakers, throttles, cache, SSRF guard, DNS-pinned HTTP client, audit decorators, field crypto — one package, pluggable backends, two thin adapters for Django and FastAPI.
 
-[![PyPI](https://img.shields.io/pypi/v/prajwal-resilience-kit.svg)](https://pypi.org/project/prajwal-resilience-kit/)
-[![Python](https://img.shields.io/pypi/pyversions/prajwal-resilience-kit.svg)](https://pypi.org/project/prajwal-resilience-kit/)
+[![PyPI](https://img.shields.io/pypi/v/resilience-kit.svg)](https://pypi.org/project/resilience-kit/)
+[![Python](https://img.shields.io/pypi/pyversions/resilience-kit.svg)](https://pypi.org/project/resilience-kit/)
 [![CI](https://github.com/prajwalmahajan101/resilience-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/prajwalmahajan101/resilience-kit/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -37,10 +37,10 @@ You probably want this if you've ever:
 ## Install
 
 ```bash
-pip install prajwal-resilience-kit                        # core: pure-python, no I/O deps
-pip install "prajwal-resilience-kit[fastapi,redis,http]"  # FastAPI app on Valkey
-pip install "prajwal-resilience-kit[django,redis,http]"   # Django app on Valkey
-pip install "prajwal-resilience-kit[all]"                 # everything
+pip install resilience-kit                        # core: pure-python, no I/O deps
+pip install "resilience-kit[fastapi,redis,http]"  # FastAPI app on Valkey
+pip install "resilience-kit[django,redis,http]"   # Django app on Valkey
+pip install "resilience-kit[all]"                 # everything
 ```
 
 ### Available extras
@@ -59,7 +59,7 @@ pip install "prajwal-resilience-kit[all]"                 # everything
 | `[all]` | everything above |
 | `[dev]` | tooling: testcontainers, pytest-asyncio, mypy, ruff |
 
-Importing a backend whose extra isn't installed raises `MissingExtraError("install prajwal-resilience-kit[redis]")` at import time — no confusing `ModuleNotFoundError` deep in a stack trace.
+Importing a backend whose extra isn't installed raises `MissingExtraError("install resilience-kit[redis]")` at import time — no confusing `ModuleNotFoundError` deep in a stack trace.
 
 ---
 

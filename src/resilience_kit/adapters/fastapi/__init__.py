@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from resilience_kit.adapters.fastapi.dependencies import rate_limit, request_id_dep
 from resilience_kit.adapters.fastapi.exception_handlers import install as install_exception_handlers
+from resilience_kit.adapters.fastapi.fields import EncryptedString
 from resilience_kit.adapters.fastapi.lifespan import (
     install_health_routes,
     resilience_lifespan,
@@ -16,6 +17,7 @@ from resilience_kit.adapters.fastapi.lifespan import (
 from resilience_kit.adapters.fastapi.middleware import install_middleware_stack
 
 __all__ = [
+    "EncryptedString",
     "install_exception_handlers",
     "install_health_routes",
     "install_middleware_stack",

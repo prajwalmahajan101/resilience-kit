@@ -355,4 +355,4 @@ MIT. See [LICENSE](./LICENSE).
 
 - [`prajwalmahajan101/fastapi_boilerplate`](https://github.com/prajwalmahajan101/fastapi_boilerplate) — async FastAPI starter, depends on `resilience-kit==0.1.0` as of the M7 migration PR.
 - [`prajwalmahajan101/django_boilerplate`](https://github.com/prajwalmahajan101/django_boilerplate) — Django + DRF starter, ditto.
-- Blog: *Circuit-breaker placement is different in async than sync — here's why.* (forthcoming on Hashnode)
+- Blog: [*Building resilience-kit: A Python Resilience Kernel Forged in Production*](https://dev.to/prajwalmahajan101/building-resilience-kit-a-python-resilience-kernel-forged-in-production-5973) — dev.to write-up covering the Five Axioms, outer-breaker / inner-retry placement, dogfooding gate, and boilerplate migration scores.

@@ -227,6 +227,79 @@ M7; re-pinned to `resilience-kit==0.1.0` at M8.
 
 ---
 
+## Post-v0.1.0 audit findings — issue lanes
+
+A four-lens audit run against v0.1.0 (`audit/RKIT-L{1,2,3,4}-*.md`) surfaced **35 issues** consolidated in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md). Each issue carries file:line evidence, a fix proposal, and acceptance criteria. The lanes below map issues to release targets; the canonical detail lives in `KNOWN-ISSUES.md` and is mirrored to GitHub Issues as filed.
+
+### Lane A — sub-day wins (target: any v0.1.x patch, ~6h total)
+
+Open-source hygiene + doc-fidelity + one-line correctness fixes. Together they lift OSS-readiness from 6.5 → 8.0.
+
+| ID | Title | Issue |
+|---|---|---|
+| #A1 | Add `Cookie` / `Set-Cookie` to default audit redaction set | KI #A1 |
+| #A2 | Remove dead `__acall__` from Django middleware | KI #A2 |
+| #A3 | Reconcile ADR-0009 vs ADR-0004 vs `_providers.py` (mark one Superseded) | KI #A3 |
+| #A4 | Bump `Development Status :: 3 - Alpha` → `4 - Beta` | KI #A4 |
+| #A5 | Configure dependabot auto-merge on green-CI patch/minor | KI #A5 |
+| #A6 | Add `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1) | KI #A6 |
+| #A7 | Add `--cov-fail-under=85` gate to CI | KI #A7 |
+| #A8 | Fix or qualify the "mypy --strict clean" README claim | KI #A8 |
+| #A9 | Throttle Lua — prepend `redis.replicate_commands()` for Redis < 7 | KI #A9 |
+| #A10 | Verify / add GitHub issue + PR templates | KI #A10 |
+
+### Lane B — v0.1.1 patch release (target: ~2 weeks, 8 issues)
+
+Correctness + security fixes. Closes the two CRITICAL findings (SSRF redirect bypass, missing `Idempotency-Key`) plus six HIGH-severity gaps. Bumps Resilience/Security rating from 7.9 → ~9.0.
+
+| ID | Severity | Title | Issue |
+|---|:---:|---|---|
+| #B1 | 🔴 CRITICAL | SSRF redirect bypass — force `follow_redirects=False` or re-validate per hop | KI #B1 |
+| #B2 | 🔴 CRITICAL | Add `Idempotency-Key` plumbing on retry POST/PUT/PATCH | KI #B2 |
+| #B3 | 🟠 HIGH | `excluded_exceptions` non-empty default (don't open breaker on caller `ValueError`/`TypeError`) | KI #B3 |
+| #B4 | 🟠 HIGH | `AuditBackend` protocol drift — `health_check` returns `HealthSnapshot`, restore `write()` | KI #B4 |
+| #B5 | 🟠 HIGH | Throttle Lua — use `redis.call('TIME')` instead of client clock | KI #B5 |
+| #B6 | 🟠 HIGH | Replace `sha256(passphrase)` KDF — accept raw Fernet key or use HKDF | KI #B6 |
+| #B7 | 🟠 HIGH | `PostgresAuditBackend._ensure_pool` — switch `threading.Lock` → `asyncio.Lock` | KI #B7 |
+| #B8 | 🟠 HIGH | Throttle fail-mode — add `fail_mode: "open" \| "closed"` toggle + document per-pod multiplier | KI #B8 |
+
+### Lane C — v0.2.0 minor (target: ~3-4 weeks, 6 issues)
+
+Observability surface becomes real; crypto rotation closed; ASGI Django finishes; fintech / PII pack ships.
+
+| ID | Title | Issue |
+|---|---|---|
+| #C1 | `MultiFernet` + key-versioning + rotation runbook | KI #C1 |
+| #C2 | `[prometheus]` extra — `prometheus_client`-backed `MetricsSink` | KI #C2 |
+| #C3 | `[otel]` extra — OpenTelemetry SDK wiring + trace propagation | KI #C3 |
+| #C4 | `[sentry]` extra or Sentry integration recipe | KI #C4 |
+| #C5 | Fintech / PII regex redactor pack (global + India patterns) | KI #C5 |
+| #C6 | DRF throttle ASGI compatibility — replace `asyncio.run` with bridged loop | KI #C6 |
+
+### Lane D — v0.3.0+ maturity (defer pending adoption signal, 11 issues)
+
+Bus-factor, ecosystem adapters, supply-chain attestation, hosted docs, announcement.
+
+| ID | Title | Issue |
+|---|---|---|
+| #D1 | Own + close `Redis.from_url()` connections across providers | KI #D1 |
+| #D2 | Sync `@circuit_breaker` — fix `asyncio.Lock` cross-loop rebind | KI #D2 |
+| #D3 | Bus factor — name + onboard a co-maintainer (`MAINTAINERS.md`) | KI #D3 |
+| #D4 | Hypothesis property-based tests for breaker state machine | KI #D4 |
+| #D5 | SBOM (CycloneDX) on release | KI #D5 |
+| #D6 | Sigstore signed releases (`attestations: true`) | KI #D6 |
+| #D7 | Flask adapter + WSGI middleware mirrors | KI #D7 |
+| #D8 | Celery adapter + `@resilient_task` | KI #D8 |
+| #D9 | `resilience-kit doctor` CLI | KI #D9 |
+| #D10 | Hosted MkDocs / Sphinx documentation site | KI #D10 |
+| #D11 | Announcement post + adoption push | KI #D11 |
+
+> **Sequencing recommendation.** Lane A this weekend → Lane B as v0.1.1 in ~2 weeks → Lane C as v0.2.0 in ~6 weeks → defer Lane D in favor of adoption work. The ROI curve is sharply diminishing past Lane B (see `audit/RATINGS-and-impact-effort.md` §2.6).
+>
+> **Source of truth.** [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md) carries the full issue bodies, fix proposals, and acceptance criteria. Update the `GH:` column there as issues are filed; update the lane table's status here as releases cut.
+
+---
+
 ## Beyond v0.1 (parking lot)
 
 Items below come from two streams: the original v0.1 design that explicitly punted things (Flask + Celery adapters, doctor CLI, Sphinx docs), and the M7 boilerplate dogfooding reports that surfaced ergonomic + operational gaps too large to retrofit into 0.1.x. Items tagged **[dogfooding]** trace back to a specific finding in the FastAPI / Django M7 integration reports; treat them as evidence-backed, not aspirational. Version targets are aspirational — items move forward when an adopter asks for them, not on a fixed cadence.

@@ -138,7 +138,7 @@ Result: `__acall__` is unreachable code. Six occurrences across the file.
 
 ### #A7 🟢 Add `--cov-fail-under` gate to CI
 
-**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_
+**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-a-quickwins`). Added `--cov-fail-under` to the CI `test` job. Floor set to **68** (not 85): the gated `test` job runs without Redis/integration, so the Redis backends are uncovered there (~69% measured) — those paths are covered in `integration.yml`. Follow-up: fold a Redis-backed coverage job in and raise the floor toward 85.
 
 **Where:** `.github/workflows/ci.yml` test job; `pyproject.toml` already has `[tool.coverage]`
 
@@ -152,7 +152,7 @@ Result: `__acall__` is unreachable code. Six occurrences across the file.
 
 ### #A8 🟡 Fix or qualify the "mypy --strict clean" claim in README
 
-**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 2 · **Priority:** 1.50 · **GH:** _unfiled_
+**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 2 · **Priority:** 1.50 · **GH:** _unfiled_ · **Status:** `fixed (already satisfied)` — audit was stale. `uv run mypy --strict src` reports *Success: no issues found in 95 source files*; `mypy.ini` already carries the per-library `ignore_missing_imports` sections; CI already has a required `types` job running it; and no literal "mypy --strict clean" overclaim exists in README. No change needed.
 
 **Where:** `README.md` (the typing section); `mypy.ini`
 
@@ -203,6 +203,19 @@ redis.call('ZADD', key, now, tostring(now) .. ':' .. tostring(math.random(100000
 **Fix.** Standard GitHub templates with sections: repro / expected / actual / kit version / Python version / extras installed.
 
 **Acceptance.** Opening a new issue on GitHub presents a populated template.
+
+---
+
+### Additional CI gates ported from `colending_partner` (not original audit items)
+
+Added alongside Lane A on branch `fix/lane-a-quickwins`, mirroring the
+`colending_partner/pr-checks.yml` gate set. Status: `fixed`.
+
+- **#A11 pip-audit (OSV)** — promoted from a manual pre-commit hook to a required CI job scanning the locked runtime deps (`uv export … | pip-audit`). Surfaced 4 real CVEs on first run; remediated by bumping `cryptography`/`pydantic-settings`/`starlette`.
+- **#A12 lockfile drift** — `uv lock --check` CI job; fails when `uv.lock` is out of sync with `pyproject.toml`.
+- **#A13 sticky PR status comment** — `notify-pr` job renders a green/red check table on each PR via `marocchino/sticky-pull-request-comment`.
+- **#A14 dead public-symbol check** — `scripts/check_dead_symbols.py` (+ pre-commit hook + CI job) flags public defs/classes with no caller and no `__all__` re-export. Found one genuine bug on first run: `cache.provider.get_cache()` crashed on every call (fixed in the same branch).
+- Plus a `Makefile` exposing the full local gate (`make gate`).
 
 ---
 

@@ -60,4 +60,106 @@ jobs:
       - run: uv sync --all-extras --group dev --python ${{ matrix.python }}
       - name: Install fake-third-party fixture (proves entry-point chain)
         run: uv pip install -e tests/fixtures/fake_third_party --python ${{ matrix.python }}
-      - run: uv run --python ${{ matrix.python }} pytest tests -q -m "not integration"
+      # Coverage gate. The floor (68) tracks the current non-Redis figure
+      # for this job (the Redis/integration paths are covered separately in
+      # integration.yml). It exists to catch regressions; raising it toward
+      # 85 as the gated surface grows is tracked in KNOWN-ISSUES #A7.
+      - run: >-
+          uv run --python ${{ matrix.python }} pytest tests -q -m "not integration"
+          --cov=resilience_kit --cov-report=term --cov-report=xml --cov-fail-under=68
+
+  pip-audit:
+    name: pip-audit (OSV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # Export the locked runtime dependency set (all extras, no dev) and
+      # scan it against OSV. Hard gate — a CVE in a shipped dependency
+      # blocks the PR until the lockfile is bumped or the advisory triaged.
+      - run: >-
+          uv export --frozen --all-extras --no-dev --no-emit-project
+          --format requirements-txt -o requirements-audit.txt
+      - run: uvx pip-audit@2.7.3 -r requirements-audit.txt
+
+  lock-check:
+    name: uv.lock in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # Fails if uv.lock drifts from pyproject.toml — the uv equivalent of
+      # a pip-compile drift check, so a forgotten `uv lock` can't ship.
+      - run: uv lock --check
+
+  dead-symbols:
+    name: dead public symbols
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # Pure-stdlib AST scan — flags public defs/classes with no caller
+      # and no __all__ re-export. No project sync needed.
+      - run: uv run --no-project python scripts/check_dead_symbols.py
+
+  notify-pr:
+    name: PR status comment
+    runs-on: ubuntu-latest
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [lint, types, imports, test, pip-audit, lock-check, dead-symbols]
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Compose status table
+        id: status
+        env:
+          LINT: ${{ needs.lint.result }}
+          TYPES: ${{ needs.types.result }}
+          IMPORTS: ${{ needs.imports.result }}
+          TEST: ${{ needs.test.result }}
+          AUDIT: ${{ needs.pip-audit.result }}
+          LOCK: ${{ needs.lock-check.result }}
+          DEAD: ${{ needs.dead-symbols.result }}
+        run: |
+          icon() { case "$1" in
+            success) echo "✅" ;; failure) echo "❌" ;;
+            cancelled) echo "⏹" ;; skipped) echo "⏭" ;; *) echo "⚠️ ($1)" ;;
+          esac; }
+          if [ "$LINT" = success ] && [ "$TYPES" = success ] && \
+             [ "$IMPORTS" = success ] && [ "$TEST" = success ] && \
+             [ "$AUDIT" = success ] && [ "$LOCK" = success ] && \
+             [ "$DEAD" = success ]; then
+            echo "header=## ✅ All CI checks green" >> "$GITHUB_OUTPUT"
+          else
+            echo "header=## ❌ CI checks failing" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "lint=$(icon "$LINT")"; echo "types=$(icon "$TYPES")"
+            echo "imports=$(icon "$IMPORTS")"; echo "test=$(icon "$TEST")"
+            echo "audit=$(icon "$AUDIT")"; echo "lock=$(icon "$LOCK")"
+            echo "dead=$(icon "$DEAD")"
+          } >> "$GITHUB_OUTPUT"
+      - name: Sticky comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: ci-status
+          message: |
+            ${{ steps.status.outputs.header }}
+
+            | Check | Status |
+            |---|---|
+            | lint + format | ${{ steps.status.outputs.lint }} |
+            | mypy --strict | ${{ steps.status.outputs.types }} |
+            | import-linter | ${{ steps.status.outputs.imports }} |
+            | tests (3.11–3.13) | ${{ steps.status.outputs.test }} |
+            | pip-audit (OSV) | ${{ steps.status.outputs.audit }} |
+            | uv.lock in sync | ${{ steps.status.outputs.lock }} |
+            | dead public symbols | ${{ steps.status.outputs.dead }} |
+
+            Commit gated: `${{ github.event.pull_request.head.sha }}`

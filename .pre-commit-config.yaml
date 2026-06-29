@@ -57,6 +57,16 @@ repos:
         pass_filenames: false
         stages: [pre-push]
 
+      # Dead public-symbol scan — flags public defs/classes under
+      # src/resilience_kit/ with no caller and no __all__ re-export.
+      # Pure stdlib; runs on pre-push alongside import-linter.
+      - id: dead-symbols
+        name: dead public symbols (no caller, no __all__)
+        entry: python scripts/check_dead_symbols.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
       # CVE scan against the lockfile. Manual stage — too slow for
       # per-commit. Run weekly:
       #   pre-commit run --hook-stage manual pip-audit

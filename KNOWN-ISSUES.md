@@ -761,6 +761,13 @@ Cross-post: HackerNews `Show HN`, Reddit `r/Python`, Lobste.rs.
 > Four extra CI gates (#A11–#A14) + a Makefile were ported from
 > `colending_partner`. See each issue's **Status** line above for detail. The
 > `GH` column below is unchanged — it tracks GitHub issue numbers, still unfiled.
+>
+> **Lane B status (2026-06-29):** all 8 Lane B items (#B1–#B8) fixed on branch
+> `fix/lane-b-correctness-security` — both 🔴 criticals (#B1 SSRF redirect,
+> #B2 idempotency) plus the six 🟠 highs. New ADRs 0012 (#B2) + 0013 (#B8);
+> ADRs 0006 + 0008 amended. The v0.1.1 release cut (version bump, CHANGELOG
+> release header, tag, publish) is intentionally **not** part of this branch.
+> See each issue's **Status** line above for detail.
 
 
 | ID | Severity | Title | Impact | Effort | Priority | Lane | GH |

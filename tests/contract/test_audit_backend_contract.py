@@ -2,8 +2,10 @@
 
 The Postgres backend can only be exercised against a live DB; the
 testcontainers integration test covers that. Here we lock the shape
-that every backend MUST satisfy: accept any :class:`AuditEvent` from
-``write_many`` without raising, and report ``health_check`` as bool.
+that every backend MUST satisfy: structurally satisfy the
+:class:`AuditBackend` protocol, accept any :class:`AuditEvent` from
+``write`` / ``write_many`` without raising, and report ``health_check``
+as a :class:`HealthSnapshot` (#B4).
 """
 
 from __future__ import annotations
@@ -15,6 +17,8 @@ from resilience_kit.audit.backends import (
     NoopAuditBackend,
     StdlibLoggingAuditBackend,
 )
+from resilience_kit.audit.backends.base import AuditBackend
+from resilience_kit.circuit_breaker.base import HealthSnapshot
 
 
 def _event() -> AuditEvent:
@@ -42,6 +46,17 @@ def backend(request: pytest.FixtureRequest) -> object:
     return request.param()
 
 
+def test_satisfies_audit_backend_protocol(backend: object) -> None:
+    """Every kit backend structurally satisfies the AuditBackend protocol (#B4)."""
+    assert isinstance(backend, AuditBackend)
+
+
+@pytest.mark.asyncio
+async def test_write_persists_single_event(backend: object) -> None:
+    """`write` accepts a single event without raising (delegates to write_many)."""
+    await backend.write(_event())  # type: ignore[attr-defined]
+
+
 @pytest.mark.asyncio
 async def test_write_many_accepts_a_batch(backend: object) -> None:
     """Every backend accepts a non-empty batch without raising."""
@@ -55,7 +70,8 @@ async def test_write_many_accepts_empty_batch(backend: object) -> None:
 
 
 @pytest.mark.asyncio
-async def test_health_check_returns_bool(backend: object) -> None:
-    """``health_check`` returns ``True`` / ``False`` (not ``None``)."""
+async def test_health_check_returns_snapshot(backend: object) -> None:
+    """``health_check`` returns a :class:`HealthSnapshot`, not a bare bool (#B4)."""
     result = await backend.health_check()  # type: ignore[attr-defined]
-    assert isinstance(result, bool)
+    assert isinstance(result, HealthSnapshot)
+    assert result.healthy is True

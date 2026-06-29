@@ -30,8 +30,10 @@ def test_noop_backend_implements_protocol() -> None:
 
 @pytest.mark.asyncio
 async def test_noop_backend_is_healthy() -> None:
-    """No-op backend is always healthy."""
-    assert await NoopAuditBackend().health_check() is True
+    """No-op backend reports a healthy HealthSnapshot (#B4)."""
+    snap = await NoopAuditBackend().health_check()
+    assert snap.healthy is True
+    assert snap.backend == "noop"
 
 
 @pytest.mark.asyncio

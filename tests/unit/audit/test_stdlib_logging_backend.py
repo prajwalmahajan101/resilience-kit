@@ -50,9 +50,11 @@ async def test_event_fields_in_extra(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @pytest.mark.asyncio
-async def test_health_check_always_true() -> None:
-    """Logging backend cannot be unhealthy from the kit's perspective."""
-    assert await StdlibLoggingAuditBackend().health_check() is True
+async def test_health_check_always_healthy() -> None:
+    """Logging backend cannot be unhealthy from the kit's perspective (#B4)."""
+    snap = await StdlibLoggingAuditBackend().health_check()
+    assert snap.healthy is True
+    assert snap.backend == "stdlib_logging"
 
 
 @pytest.mark.asyncio

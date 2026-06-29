@@ -14,6 +14,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ### Changed
 
+- `AuditBackend` protocol restored to its locked LLD §2 shape: `health_check()` now returns a `HealthSnapshot` (not a bare `bool`) and a single-event `write()` is back alongside `write_many()`. The `bool` return was a latent crash — the `/readyz` aggregator reads `.healthy` on every snapshot, so an audit backend registered for recovery would have raised `AttributeError`. All three kit backends (noop, stdlib_logging, postgres) updated. (Lane B #B4)
 - `BreakerConfig.excluded_exceptions` now defaults to `(ValueError, TypeError, KeyError, AttributeError, AssertionError)` instead of `()`. These caller/programmer errors no longer trip a transport-failure breaker — a `ValueError` from business logic kept legitimate traffic flowing instead of forcing the circuit OPEN. Overridable per service; the registry falls back to this set only when no override is supplied. (Lane B #B3)
 - Classifier `Development Status :: 3 - Alpha` → `4 - Beta` — the surface has a locked API, a migration guide, two adopter dogfood reports, and Trusted Publishing. (Lane A #A4)
 - `DefaultRedactor.DEFAULT_FIELDS` now redacts `cookie` / `set-cookie` by default — session cookies are auth-bearing (CWE-532). (Lane A #A1)

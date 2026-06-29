@@ -285,7 +285,7 @@ For the bare `@retry` decorator (no HTTP context), document this is the caller's
 
 ### #B4 🟠 `AuditBackend` protocol contract drift — `health_check` signature
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` via option 2 (branch `fix/lane-b-correctness-security`) — restored the protocol to LLD §2: `health_check() -> HealthSnapshot` and a single-event `write()` delegating to `write_many()`, on all three kit backends (noop, stdlib_logging, postgres). LLD §2 already specified this shape, so the code was the drift; no LLD change needed. Contract test now asserts `isinstance(backend, AuditBackend)`, `write()` round-trip, and a `HealthSnapshot` return.
 
 **Where:** `src/resilience_kit/audit/backends/base.py:48-78`; `docs/LLD.md` §2; `src/resilience_kit/health.py:99`
 

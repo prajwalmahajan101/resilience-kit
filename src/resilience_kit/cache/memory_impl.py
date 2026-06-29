@@ -22,12 +22,19 @@ class InMemoryAsyncCache:
     Stored shape: ``{key: (value, expires_at_monotonic_or_None)}``.
     """
 
-    def __init__(self, clock: Clock | None = None) -> None:
+    def __init__(self, clock: Clock | None = None, *, alias: str | None = None) -> None:
         """Initialise an empty cache.
 
         Args:
             clock: Injectable clock — for tests.
+            alias: Accepted and ignored. The provider chain resolves the
+                kit's ``memory`` entry point to this class directly and
+                passes ``alias`` (meaningful only for backends that
+                namespace per alias, like Redis). Accepting it here keeps
+                ``cache.provider.get_cache(alias=...)`` working when the
+                entry point shadows the ``_build_memory`` adapter.
         """
+        del alias  # only meaningful for per-alias-namespaced backends
         self._clock: Clock = clock or SystemClock()
         self._lock = asyncio.Lock()
         self._store: dict[str, tuple[Any, float | None]] = {}

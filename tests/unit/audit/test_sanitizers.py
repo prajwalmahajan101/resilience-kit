@@ -29,6 +29,22 @@ def test_substring_matching() -> None:
     assert out["user_name"] == "alice"
 
 
+def test_redacts_cookie_headers_by_default() -> None:
+    """Cookie and Set-Cookie are redacted by default, case-insensitively (#A1)."""
+    out = DefaultRedactor().sanitize(
+        {
+            "headers": {
+                "Cookie": "session=abc123",
+                "SET-COOKIE": "session=def456; HttpOnly",
+                "Accept": "application/json",
+            },
+        },
+    )
+    assert out["headers"]["Cookie"] == REDACTED
+    assert out["headers"]["SET-COOKIE"] == REDACTED
+    assert out["headers"]["Accept"] == "application/json"
+
+
 def test_deep_walks_dicts_and_lists() -> None:
     """Nested dicts and lists are walked; sensitive values inside are redacted."""
     src = {

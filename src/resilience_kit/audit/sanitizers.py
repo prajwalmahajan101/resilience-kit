@@ -56,6 +56,8 @@ class DefaultRedactor:
         "authorization",
         "api_key",
         "x-api-key",
+        "cookie",
+        "set-cookie",
     )
 
     def __init__(self, fields: Iterable[str] | None = None) -> None:

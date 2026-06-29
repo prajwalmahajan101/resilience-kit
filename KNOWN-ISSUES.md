@@ -37,7 +37,7 @@ Each fits in <1 day. Total effort ~6 hours. Closes 10 issues, lifts OSS-readines
 
 ### #A1 🟢 Add `Cookie`, `Set-Cookie` to default audit redaction set
 
-**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_
+**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-a-quickwins`)
 
 **Where:** `src/resilience_kit/audit/sanitizers.py:52-59` (`DEFAULT_FIELDS`)
 

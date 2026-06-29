@@ -4,11 +4,17 @@ Single source of truth for plaintext ↔ ciphertext round-trips used by
 the SQLAlchemy ``EncryptedString`` (M5) and the Django
 ``EncryptedCharField`` (M6).
 
-Key derivation::
+Key resolution (#B6):
 
-    digest = sha256(field_encryption_key)
-    fernet_key = base64.urlsafe_b64encode(digest)
-    Fernet(fernet_key)
+* If ``field_encryption_key`` is already a valid Fernet key (32 url-safe
+  base64 bytes, e.g. from ``Fernet.generate_key()``) it is used **directly**.
+  This is the recommended path — give the kit a real key.
+* Otherwise the value is treated as a passphrase and the key is derived via
+  ``base64.urlsafe_b64encode(sha256(passphrase))``. This path is **deprecated**
+  (unsalted, no work factor — weak for low-entropy passphrases) and emits a
+  one-time warning. It is retained only so data encrypted by earlier versions
+  still decrypts; supply a real Fernet key for new deployments. Salted-KDF /
+  key-rotation hardening lands with ``MultiFernet`` (Lane C #C1).
 
 A dedicated ``field_encryption_key`` (vs. reusing an application
 ``secret_key``) means that routine rotation of any other secret cannot
@@ -93,8 +99,44 @@ def _fernet() -> Fernet:
         )
         key_source = _DEV_FALLBACK_KEY
 
-    digest = hashlib.sha256(key_source.encode("utf-8")).digest()
-    return Fernet(base64.urlsafe_b64encode(digest))
+    # The dev fallback is intentionally a passphrase and already warned about
+    # above; don't double-warn it as a deprecated derivation.
+    return Fernet(_resolve_fernet_key(key_source, warn_on_legacy=secret is not None))
+
+
+def _resolve_fernet_key(key_source: str, *, warn_on_legacy: bool) -> bytes:
+    """Return the Fernet key bytes for ``key_source``.
+
+    Prefers a directly-supplied Fernet key; falls back to the deprecated
+    SHA-256 derivation for passphrases so legacy ciphertext stays readable.
+
+    Args:
+        key_source: The configured key or passphrase.
+        warn_on_legacy: Emit the deprecation warning when falling back to
+            SHA-256 derivation (suppressed for the dev fallback).
+
+    Returns:
+        Bytes accepted by :class:`~cryptography.fernet.Fernet`.
+    """
+    raw = key_source.encode("utf-8")
+    try:
+        # Fernet's constructor validates "32 url-safe base64-encoded bytes";
+        # if it accepts the value, it's a real key — use it directly.
+        Fernet(raw)
+    except (ValueError, TypeError):
+        pass
+    else:
+        return raw
+
+    if warn_on_legacy:
+        logger.warning(
+            "FernetCipher: field_encryption_key is a passphrase, not a Fernet "
+            "key; deriving via unsalted SHA-256. This is weak for low-entropy "
+            "inputs and is deprecated — supply a real key from "
+            "Fernet.generate_key(). Existing data stays decryptable.",
+        )
+    digest = hashlib.sha256(raw).digest()
+    return base64.urlsafe_b64encode(digest)
 
 
 def reset_fernet_cache() -> None:

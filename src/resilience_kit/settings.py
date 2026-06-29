@@ -7,9 +7,10 @@ from a caller-supplied :class:`~resilience_kit.runtime.SettingsSource`.
 
 from __future__ import annotations
 
+import warnings
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -67,6 +68,24 @@ class CryptoSettings(BaseModel):
 
     field_encryption_key: SecretStr | None = None
     environment: Literal["prod", "dev", "test"] = "prod"
+
+    @field_validator("field_encryption_key")
+    @classmethod
+    def _warn_on_weak_key(cls, v: SecretStr | None) -> SecretStr | None:
+        """Warn when the key is a short passphrase rather than a real Fernet key.
+
+        A real Fernet key is 44 url-safe-base64 chars (32 raw bytes); anything
+        shorter is a passphrase that will be SHA-256-derived (deprecated, weak —
+        see #B6). This is a warning, not an error, to stay non-breaking.
+        """
+        if v is not None and len(v.get_secret_value()) < 32:
+            warnings.warn(
+                "crypto.field_encryption_key looks like a short passphrase; "
+                "supply a real Fernet key (Fernet.generate_key()) for proper "
+                "key strength. Passphrase keys are SHA-256-derived (deprecated).",
+                stacklevel=2,
+            )
+        return v
 
 
 class RecoverySettings(BaseModel):

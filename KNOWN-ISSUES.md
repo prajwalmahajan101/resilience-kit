@@ -340,7 +340,7 @@ Recommended: option 2 — make the protocol match the documented contract. Backw
 
 ### #B6 🟠 Replace `sha256(passphrase)` KDF with PBKDF2/Argon2
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` via track 1 (non-breaking) (branch `fix/lane-b-correctness-security`) — `_resolve_fernet_key()` now uses a directly-supplied Fernet key as-is and falls back to the (deprecated, one-time-warned) SHA-256 derivation for passphrases so legacy ciphertext still decrypts; added a `field_encryption_key` short-passphrase validator; amended ADR-0008. HKDF/Argon2 + MultiFernet rotation deferred to Lane C #C1.
 
 **Where:** `src/resilience_kit/crypto/fernet.py:96-97`
 

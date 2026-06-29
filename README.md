@@ -254,7 +254,7 @@ Single `ResilienceSettings` model (pydantic v2). Resolved through `get_settings(
 | `defaults.throttle.fail_mode` | `open` | Redis-outage behaviour — `open` (per-pod in-memory fallback) or `closed` (deny while degraded). See note below. |
 | `ssrf.block_private_ips` | `True` | |
 | `ssrf.outbound_allowlist` | `["*"]` | exact host or `.suffix` |
-| `crypto.field_encryption_key` | `None` | required outside dev/test |
+| `crypto.field_encryption_key` | `None` | required outside dev/test. Supply a real Fernet key (`Fernet.generate_key()`) — used directly. A passphrase is accepted but SHA-256-derived (deprecated, weak; see #B6). |
 | `audit.sink` | stdlib logging | importable string, callable, or entry-point name |
 | `audit.redact_fields` | `["password", "token", "secret", "authorization"]` | |
 

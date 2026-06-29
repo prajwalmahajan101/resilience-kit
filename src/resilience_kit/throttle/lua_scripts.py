@@ -6,15 +6,21 @@ Two scripts:
   * :data:`FIXED_WINDOW_LUA` — global O(1) two-bucket weighted average,
     suitable for a single shared bucket across many keys.
 
-Both ported verbatim from
+Ported from
 ``fastapi_boilerplate/src/core/resilience/throttle/lua_scripts.py`` (and
-``global_lua.py`` for the fixed-window variant).
+``global_lua.py`` for the fixed-window variant), with one change: the
+sliding-window member id uses a deterministic per-key ``INCR`` counter
+instead of ``math.random``. Mixing ``math.random`` with write commands
+makes the script non-deterministic, which Redis < 7 rejects ("Write
+commands not allowed after non deterministic commands") unless
+``redis.replicate_commands()`` is declared. A counter keeps the script
+deterministic and replicable on every supported Redis/Valkey version.
 """
 
 from __future__ import annotations
 
 #: Version tag — bump in lockstep with any change.
-THROTTLE_LUA_VERSION = "v1"
+THROTTLE_LUA_VERSION = "v2"
 
 #: Per-identifier sliding window. Returns ``{allowed, count, ttl}``.
 SLIDING_WINDOW_LUA = """\
@@ -34,7 +40,9 @@ if count >= limit then
     return {0, count, ttl}
 end
 
-redis.call('ZADD', key, now, tostring(now) .. ':' .. tostring(math.random(1000000)))
+local seq = redis.call('INCR', key .. ':__seq')
+redis.call('EXPIRE', key .. ':__seq', window)
+redis.call('ZADD', key, now, tostring(now) .. ':' .. tostring(seq))
 redis.call('EXPIRE', key, window)
 
 return {1, count + 1, window}

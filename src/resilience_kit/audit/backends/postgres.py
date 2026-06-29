@@ -15,8 +15,8 @@ schema-managed deployments.
 
 from __future__ import annotations
 
+import asyncio
 import json
-import threading
 from typing import TYPE_CHECKING
 
 from resilience_kit.exceptions import MissingExtraError
@@ -113,14 +113,17 @@ class PostgresAuditBackend:
         self._min = min_pool_size
         self._max = max_pool_size
         self._pool: asyncpg.Pool | None = None
-        self._pool_lock = threading.Lock()
+        # asyncio.Lock (not threading.Lock): a threading.Lock is released the
+        # moment ``await`` suspends, so concurrent first writes could both pass
+        # the guard, both ``await create_pool``, and leak the orphaned pool.
+        self._pool_lock = asyncio.Lock()
 
     async def _ensure_pool(self) -> asyncpg.Pool:
         if self._pool is not None:
             return self._pool
         # Double-checked locking is fine here — pool creation is idempotent
         # but expensive, so we serialise across concurrent first writes.
-        with self._pool_lock:
+        async with self._pool_lock:
             if self._pool is None:
                 self._pool = await asyncpg.create_pool(
                     self._dsn,

@@ -369,7 +369,7 @@ Also: add a `field_encryption_key` validator with `min_length=32` and an entropy
 
 ### #B7 🟠 `PostgresAuditBackend._ensure_pool` — `threading.Lock` does not serialise `await`
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-b-correctness-security`) — `_pool_lock` switched to `asyncio.Lock`; added a unit test asserting concurrent `_ensure_pool` calls create exactly one pool.
 
 **Where:** `src/resilience_kit/audit/backends/postgres.py:118-131`
 

@@ -20,6 +20,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ### Fixed
 
+- `PostgresAuditBackend._ensure_pool` now guards pool creation with an `asyncio.Lock` instead of a `threading.Lock`. A `threading.Lock` is released the instant `await` suspends, so concurrent first writes (from `FireAndForgetDispatcher`) could both create a pool and leak the orphan. (Lane B #B7)
 - `cache.provider.get_cache()` no longer crashes. The `memory` entry point resolves to `InMemoryAsyncCache` directly (shadowing the `_build_memory` adapter), which was then called with an `alias` kwarg it did not accept. `InMemoryAsyncCache.__init__` now accepts and ignores `alias`, matching the adapter's contract. Surfaced by the new dead-symbol gate (#A14); the function had no caller. Added a provider unit test.
 
 ### Security

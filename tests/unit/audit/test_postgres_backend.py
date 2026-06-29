@@ -8,7 +8,9 @@ DB (DSN-required guard, row shape, SQL retargeting).
 
 from __future__ import annotations
 
+import asyncio
 import json
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -65,3 +67,31 @@ def test_table_override_retargets_insert_sql() -> None:
     sql = backend._insert_sql
     assert "custom_audit" in sql
     assert "resilience_kit_audit" not in sql
+
+
+@pytest.mark.asyncio
+async def test_ensure_pool_serialises_concurrent_first_writes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Concurrent first writes create exactly one pool (#B7).
+
+    A ``threading.Lock`` is released the instant ``await`` suspends, so two
+    coroutines racing through ``_ensure_pool`` would both create a pool and
+    leak one. The ``asyncio.Lock`` must serialise them into a single
+    ``create_pool`` call.
+    """
+    backend = PostgresAuditBackend(dsn="postgresql://invalid/invalid")
+
+    async def slow_create_pool(*_args: object, **_kwargs: object) -> object:
+        # Yield control so a broken lock lets the second coroutine slip past
+        # the ``is None`` guard before the first finishes.
+        await asyncio.sleep(0)
+        return AsyncMock(name="pool")
+
+    create_pool = AsyncMock(side_effect=slow_create_pool)
+    monkeypatch.setattr("asyncpg.create_pool", create_pool)
+
+    pools = await asyncio.gather(backend._ensure_pool(), backend._ensure_pool())
+
+    assert create_pool.call_count == 1
+    assert pools[0] is pools[1]

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -95,14 +93,21 @@ def test_raw_fernet_key_is_used_directly() -> None:
     assert Fernet(key).decrypt(token.encode("ascii")).decode("utf-8") == "hello"
 
 
-def test_passphrase_uses_legacy_sha256_derivation() -> None:
-    """A passphrase still derives the same SHA-256 key — legacy data stays readable."""
-    passphrase = "a-real-secret"
-    _install(field_encryption_key=SecretStr(passphrase), environment="prod")
-    token = FernetCipher.encrypt("hello")
-    # The legacy derivation is unchanged, so old ciphertext still decrypts.
-    derived = base64.urlsafe_b64encode(hashlib.sha256(passphrase.encode()).digest())
-    assert Fernet(derived).decrypt(token.encode("ascii")).decode("utf-8") == "hello"
+def test_legacy_passphrase_ciphertext_still_decrypts() -> None:
+    """Ciphertext written by the pre-#B6 SHA-256 derivation still decrypts.
+
+    The token below was produced by an earlier kit version from the passphrase
+    ``"a-real-secret"`` (key = ``b64(sha256(passphrase))``). That the current
+    code decrypts it proves the legacy derivation is byte-for-byte unchanged, so
+    upgrading forces no data migration. Pinning the ciphertext keeps the test
+    from hashing a passphrase itself.
+    """
+    legacy_token = (
+        "gAAAAABqQmYCjX0Pn1phIBEkrnHnj7XCfYo0xvs-"
+        "h2RCQCDnROPwgN1IOBOXzfpH_dFQ4ddaxKaegyUXGWP5tiK9XkWaflDZmA=="
+    )
+    _install(field_encryption_key=SecretStr("a-real-secret"), environment="prod")
+    assert FernetCipher.decrypt(legacy_token) == "hello"
 
 
 def test_passphrase_emits_deprecation_warning(

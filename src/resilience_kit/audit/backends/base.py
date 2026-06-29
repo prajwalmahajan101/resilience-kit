@@ -73,7 +73,6 @@ class AuditBackend(Protocol):
         Raises:
             Exception: Any persistence failure (see :meth:`write_many`).
         """
-        ...
 
     async def write_many(self, events: Sequence[AuditEvent]) -> None:
         """Persist a batch of audit events.

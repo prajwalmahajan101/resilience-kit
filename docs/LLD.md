@@ -354,7 +354,7 @@ sequenceDiagram
     D->>T: check("ip:1.2.3.4:/v1/x", Rate(60, 60))
     T->>S: get SHA for token_bucket.lua
     alt SHA present
-        T->>R: EVALSHA(sha, [key], [now, refill, capacity])
+        T->>R: EVALSHA(sha, [key], [limit, window])
     else SHA missing or NoScriptError
         T->>R: SCRIPT LOAD lua → new sha
         T->>S: store
@@ -367,6 +367,7 @@ sequenceDiagram
 
 Script properties:
 - Single round-trip → no cross-worker race.
+- `now` is read **server-side** via `redis.call('TIME')`, never passed by the client. Two pods with NTP drift would otherwise compute different window cutoffs against the same sorted set, silently breaking the sliding-window invariant. Each script declares `redis.replicate_commands()` so the writes after the non-deterministic `TIME` read replicate on Redis < 7 (no-op on Redis 7+ / Valkey 8). (#B5)
 - TTL refresh = `2 * per_seconds` on every write — keys self-expire when traffic dies.
 - `NoScriptError` triggers exactly one re-load + retry per process per script version.
 - On any `ConnectionError`, the throttle **fails open** and emits `metrics.incr("throttle.fail_open")`; the recovery monitor takes over.

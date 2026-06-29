@@ -178,7 +178,9 @@ class RedisAsyncThrottle:
         async with self._sha_lock:
             if self._sha is None:
                 self._sha = await self._redis.script_load(SLIDING_WINDOW_LUA)
-        argv = [str(rate.count), str(int(rate.per_seconds)), str(self._clock.now())]
+        # `now` is read server-side via redis.call('TIME') inside the Lua, so
+        # cross-pod clock drift cannot skew the window (#B5). No client clock argv.
+        argv = [str(rate.count), str(int(rate.per_seconds))]
         try:
             res = await self._redis.evalsha(self._sha, 1, full_key, *argv)
         except _redis_exceptions.NoScriptError:

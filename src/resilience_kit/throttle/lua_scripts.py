@@ -8,26 +8,36 @@ Two scripts:
 
 Ported from
 ``fastapi_boilerplate/src/core/resilience/throttle/lua_scripts.py`` (and
-``global_lua.py`` for the fixed-window variant), with one change: the
-sliding-window member id uses a deterministic per-key ``INCR`` counter
-instead of ``math.random``. Mixing ``math.random`` with write commands
-makes the script non-deterministic, which Redis < 7 rejects ("Write
-commands not allowed after non deterministic commands") unless
-``redis.replicate_commands()`` is declared. A counter keeps the script
-deterministic and replicable on every supported Redis/Valkey version.
+``global_lua.py`` for the fixed-window variant), with two changes:
+
+1. The sliding-window member id uses a deterministic per-key ``INCR``
+   counter instead of ``math.random`` (the member id must stay unique
+   and deterministic).
+2. ``now`` is read from the **server** via ``redis.call('TIME')`` rather
+   than passed in by the client. Two pods with NTP drift would otherwise
+   compute different window cutoffs against the same sorted set,
+   silently breaking the sliding-window invariant (over- or
+   under-throttling the fleet).
+
+Because ``TIME`` is a non-deterministic command, each script declares
+``redis.replicate_commands()`` up front so writes after the ``TIME`` read
+are accepted on Redis < 7 (verbatim replication). It is a harmless no-op
+on Redis 7+ / Valkey 8 (effect replication is already the default).
 """
 
 from __future__ import annotations
 
 #: Version tag — bump in lockstep with any change.
-THROTTLE_LUA_VERSION = "v2"
+THROTTLE_LUA_VERSION = "v3"
 
 #: Per-identifier sliding window. Returns ``{allowed, count, ttl}``.
 SLIDING_WINDOW_LUA = """\
+redis.replicate_commands()
 local key = KEYS[1]
 local limit = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
-local now = tonumber(ARGV[3])
+local t = redis.call('TIME')
+local now = tonumber(t[1]) + tonumber(t[2]) / 1000000
 
 local cutoff = now - window
 
@@ -51,10 +61,12 @@ return {1, count + 1, window}
 #: Global fixed-window with two-bucket weighted blend; O(1). Returns
 #: ``{allowed, effective_count_ceil, remaining_window_seconds_ceil}``.
 FIXED_WINDOW_LUA = """\
+redis.replicate_commands()
 local key_prefix = KEYS[1]
 local limit = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
-local now = tonumber(ARGV[3])
+local t = redis.call('TIME')
+local now = tonumber(t[1]) + tonumber(t[2]) / 1000000
 
 local window_start = math.floor(now / window) * window
 local window_position = (now - window_start) / window

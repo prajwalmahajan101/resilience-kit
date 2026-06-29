@@ -18,6 +18,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 - Classifier `Development Status :: 3 - Alpha` → `4 - Beta` — the surface has a locked API, a migration guide, two adopter dogfood reports, and Trusted Publishing. (Lane A #A4)
 - `DefaultRedactor.DEFAULT_FIELDS` now redacts `cookie` / `set-cookie` by default — session cookies are auth-bearing (CWE-532). (Lane A #A1)
 - Sliding-window throttle Lua uses a deterministic `INCR` counter for ZSET member ids instead of `math.random`, fixing non-determinism that Redis < 7 rejects. (Lane A #A9)
+- Throttle Lua now reads `now` server-side via `redis.call('TIME')` instead of the client clock. Two pods with NTP drift previously computed different window cutoffs against the same sorted set, silently over- or under-throttling the fleet. Scripts declare `redis.replicate_commands()` for Redis < 7 (no-op on Redis 7+ / Valkey 8); `THROTTLE_LUA_VERSION` bumped `v2` → `v3`. (Lane B #B5)
 
 ### Fixed
 

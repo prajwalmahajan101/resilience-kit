@@ -6,6 +6,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ### Added
 
+- Value-scanning audit redactors: `RegexRedactor` (field-name matching plus regex over string leaves) and the batteries-included `IndiaFintechRedactor`, registered under the `india_fintech` sanitiser entry point. Ship `GLOBAL_PII_PATTERNS` (email, IBAN, Luhn-checked credit card) and `INDIA_PII_PATTERNS` (PAN, IFSC, Indian mobile, Aadhaar, bank account) so PII embedded *inside* an innocuous field value (e.g. `{"notes": "PAN ABCDE1234F"}`) is masked, not just whole sensitive keys. Select via `RESILIENCE_AUDIT__SANITIZER=india_fintech`. (Lane C #C5)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant v2.1. Linked from README and `CONTRIBUTING.md`. (Lane A #A6)
 - `.github/workflows/dependabot-automerge.yml` — auto-merges Dependabot patch/minor PRs once required checks pass; majors stay manual. (Lane A #A5)
 - CI gates ported from `colending_partner`: a `pip-audit` (OSV) dependency-vuln job, a `uv lock --check` lockfile-drift job, a dead public-symbol check (`scripts/check_dead_symbols.py` + pre-commit hook), and a sticky PR status comment. (Lane A #A11–#A14)
@@ -20,6 +21,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 - `BreakerConfig.excluded_exceptions` now defaults to `(ValueError, TypeError, KeyError, AttributeError, AssertionError)` instead of `()`. These caller/programmer errors no longer trip a transport-failure breaker — a `ValueError` from business logic kept legitimate traffic flowing instead of forcing the circuit OPEN. Overridable per service; the registry falls back to this set only when no override is supplied. (Lane B #B3)
 - Classifier `Development Status :: 3 - Alpha` → `4 - Beta` — the surface has a locked API, a migration guide, two adopter dogfood reports, and Trusted Publishing. (Lane A #A4)
 - `DefaultRedactor.DEFAULT_FIELDS` now redacts `cookie` / `set-cookie` by default — session cookies are auth-bearing (CWE-532). (Lane A #A1)
+- `settings.audit.redact_fields` default now mirrors `DefaultRedactor.DEFAULT_FIELDS` (adds `api_key`, `x-api-key`, `cookie`, `set-cookie`); the wired default was silently narrower than the code default, under-redacting those keys. (Lane C #C5)
 - Sliding-window throttle Lua uses a deterministic `INCR` counter for ZSET member ids instead of `math.random`, fixing non-determinism that Redis < 7 rejects. (Lane A #A9)
 - Throttle Lua now reads `now` server-side via `redis.call('TIME')` instead of the client clock. Two pods with NTP drift previously computed different window cutoffs against the same sorted set, silently over- or under-throttling the fleet. Scripts declare `redis.replicate_commands()` for Redis < 7 (no-op on Redis 7+ / Valkey 8); `THROTTLE_LUA_VERSION` bumped `v2` → `v3`. (Lane B #B5)
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from resilience_kit.throttle import Rate
 
 if TYPE_CHECKING:
@@ -42,6 +44,12 @@ async def test_window_slides(
     throttle_factory: Callable[..., AsyncThrottle],
     clock: FakeClock,
 ) -> None:
+    if throttle_factory.backend == "redis":  # type: ignore[attr-defined]
+        pytest.skip(
+            "redis throttle reads server-side TIME (#B5); the injected FakeClock "
+            "cannot fast-forward Redis. Server-time behaviour is covered by "
+            "tests/integration/test_throttle_server_time.py.",
+        )
     throttle = throttle_factory(clock=clock)
     rate = Rate(count=2, per_seconds=60)
     await throttle.check("k", rate)

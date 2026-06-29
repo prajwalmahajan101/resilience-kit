@@ -324,7 +324,7 @@ Recommended: option 2 — make the protocol match the documented contract. Backw
 
 ### #B5 🟠 Throttle Lua — use `redis.call('TIME')` instead of client clock
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-b-correctness-security`) — both Lua scripts now read `now` from `redis.call('TIME')` (with `redis.replicate_commands()` for Redis < 7); dropped the client-clock ARGV from `_eval`; bumped `THROTTLE_LUA_VERSION` to `v3`. Added `tests/integration/test_throttle_server_time.py` (two divergent-clock pods share one window); `test_window_slides` now skips the redis backend (server time can't be fast-forwarded by `FakeClock`).
 
 **Where:** `src/resilience_kit/throttle/redis_impl.py:181`; `src/resilience_kit/throttle/lua_scripts.py`
 

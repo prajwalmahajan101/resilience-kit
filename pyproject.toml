@@ -58,6 +58,7 @@ audit-postgres = ["asyncpg>=0.29"]
 django = ["django>=4.2,<7", "djangorestframework>=3.14"]
 fastapi = ["fastapi>=0.110", "starlette>=0.36", "sqlalchemy>=2.0", "httpx>=0.27,<0.29"]
 prometheus = ["prometheus-client>=0.19"]
+otel = ["opentelemetry-api>=1.23", "opentelemetry-sdk>=1.23"]
 all = [
     "redis>=5.0",
     "httpx>=0.27,<0.29",
@@ -70,6 +71,8 @@ all = [
     "starlette>=0.36",
     "sqlalchemy>=2.0",
     "prometheus-client>=0.19",
+    "opentelemetry-api>=1.23",
+    "opentelemetry-sdk>=1.23",
 ]
 
 # Entry-point groups for third-party backend discovery (LLD §3).
@@ -96,6 +99,7 @@ india_fintech = "resilience_kit.audit.sanitizers:IndiaFintechRedactor"
 noop = "resilience_kit.metrics:NoopMetricsSink"
 stdlib_logging = "resilience_kit.metrics:StdlibLoggingMetricsSink"
 prometheus = "resilience_kit.metrics.prometheus:PrometheusMetricsSink"
+otel = "resilience_kit.metrics.otel:OtelMetricsSink"
 
 # Intentionally empty — extension hook for third-party `SettingsSource`
 # implementations (LLD §3, ADR 0004). Third parties register a provider

@@ -466,7 +466,7 @@ Recommended: option 3. Default stays fail-open for ergonomics; fintech users can
 
 ### #C3 🟡 Add `[otel]` extra with OpenTelemetry SDK wiring
 
-**Severity:** MEDIUM · **Impact:** 4 · **Effort:** 4 · **Priority:** 1.00 · **GH:** _unfiled_
+**Severity:** MEDIUM · **Impact:** 4 · **Effort:** 4 · **Priority:** 1.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `feat/c3-otel` → `feat/lane-c-v0.2.0`) — `[otel]` extra; `OtelMetricsSink` (`metrics/otel.py` + entry point); `tracing/` package with `TracingMiddleware` (W3C `traceparent` extract, SERVER span, `request_id`/`correlation_id` span attrs, 5xx→ERROR) + `inject_trace_context`; `AsyncAPIClient` injects `traceparent` outbound best-effort (guarded, no-op without the extra). ADR-0016 + `docs/otel-integration.md`. **Deviation:** `TracingMiddleware` is **opt-in**, not auto-wired into the default adapter stacks (auto-wiring would force the otel import on every adopter). 14 tests (in-memory span exporter + metric reader).
 
 **Where:** New `src/resilience_kit/metrics/otel.py`; new `src/resilience_kit/tracing/`
 

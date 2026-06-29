@@ -88,6 +88,7 @@ stdlib_logging = "resilience_kit.audit.backends.stdlib_logging:StdlibLoggingAudi
 
 [project.entry-points."resilience_kit.audit_sanitizers"]
 default = "resilience_kit.audit.sanitizers:DefaultRedactor"
+india_fintech = "resilience_kit.audit.sanitizers:IndiaFintechRedactor"
 
 [project.entry-points."resilience_kit.metrics_sinks"]
 noop = "resilience_kit.metrics:NoopMetricsSink"

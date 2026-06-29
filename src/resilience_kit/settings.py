@@ -106,7 +106,19 @@ class AuditSettings(BaseModel):
     sink: str = "stdlib_logging"
     sanitizer: str = "default"
     redact_fields: list[str] = Field(
-        default_factory=lambda: ["password", "token", "secret", "authorization"],
+        # Mirrors ``DefaultRedactor.DEFAULT_FIELDS`` (kept in sync by hand so
+        # the settings layer does not import the higher audit layer). The
+        # wired default must not under-redact relative to the code default.
+        default_factory=lambda: [
+            "password",
+            "token",
+            "secret",
+            "authorization",
+            "api_key",
+            "x-api-key",
+            "cookie",
+            "set-cookie",
+        ],
     )
     queue_size: int = 10_000
     batch_max: int = 100

@@ -504,7 +504,7 @@ Optionally ship `[sentry]` extra with a pre-wired sink.
 
 ### #C5 🟠 Add fintech / PII regex defaults to the audit redactor
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `feat/c5-pii-redactor` → `feat/lane-c-v0.2.0`) — added value-scanning `RegexRedactor` + `PiiPattern` + `GLOBAL_PII_PATTERNS` (email/IBAN/Luhn-checked card) + `INDIA_PII_PATTERNS` (PAN/IFSC/mobile/Aadhaar/bank-acct) + `IndiaFintechRedactor`; registered the `india_fintech` sanitiser entry point; aligned `settings.audit.redact_fields` default with `DefaultRedactor.DEFAULT_FIELDS` (was under-redacting). 10 new unit tests.
 
 **Where:** `src/resilience_kit/audit/sanitizers.py`; possibly new `[fintech-pii]` or `[india-pii]` extra
 

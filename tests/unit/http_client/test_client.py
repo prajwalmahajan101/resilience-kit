@@ -176,5 +176,91 @@ async def test_verb_shortcuts_delegate_to_request() -> None:
     assert seen == ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
 
+@pytest.mark.asyncio
+async def test_auto_idempotency_key_is_stable_across_retries() -> None:
+    """#B2: a POST retried after a timeout sends the same Idempotency-Key."""
+    keys: list[str | None] = []
+    attempts = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        keys.append(request.headers.get("Idempotency-Key"))
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            raise httpx.TimeoutException("simulated timeout", request=request)
+        return httpx.Response(200, json={"ok": True})
+
+    client = AsyncAPIClient(
+        service="partner-idem",
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    with patch("resilience_kit.ssrf.guard.socket.getaddrinfo", _public_resolver):
+        resp = await client.post(
+            "https://partner.example/v1/charge",
+            auto_idempotency_key=True,
+        )
+
+    assert resp.status_code == 200
+    assert len(keys) == 2  # timed out once, retried once
+    assert keys[0] is not None
+    assert keys[0] == keys[1]  # byte-identical across attempts
+
+
+@pytest.mark.asyncio
+async def test_explicit_idempotency_key_is_sent() -> None:
+    """#B2: an explicit idempotency_key becomes the Idempotency-Key header."""
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("Idempotency-Key"))
+        return httpx.Response(200)
+
+    client = AsyncAPIClient(
+        service="partner-idem2",
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    with patch("resilience_kit.ssrf.guard.socket.getaddrinfo", _public_resolver):
+        await client.post("https://partner.example/v1/x", idempotency_key="abc-123")
+
+    assert seen == ["abc-123"]
+
+
+@pytest.mark.asyncio
+async def test_auto_idempotency_key_skipped_for_safe_methods() -> None:
+    """#B2: auto-gen is a no-op for GET (no double-charge risk to guard)."""
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("Idempotency-Key"))
+        return httpx.Response(200)
+
+    client = AsyncAPIClient(
+        service="partner-idem3",
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    with patch("resilience_kit.ssrf.guard.socket.getaddrinfo", _public_resolver):
+        await client.get("https://partner.example/v1/x", auto_idempotency_key=True)
+
+    assert seen == [None]
+
+
+@pytest.mark.asyncio
+async def test_no_idempotency_key_by_default() -> None:
+    """#B2: a plain POST sends no Idempotency-Key unless asked."""
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("Idempotency-Key"))
+        return httpx.Response(200)
+
+    client = AsyncAPIClient(
+        service="partner-idem4",
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    with patch("resilience_kit.ssrf.guard.socket.getaddrinfo", _public_resolver):
+        await client.post("https://partner.example/v1/x")
+
+    assert seen == [None]
+
+
 # Avoid unused-import warning for asyncio (it is needed implicitly via pytest-asyncio).
 _ = asyncio

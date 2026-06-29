@@ -248,7 +248,7 @@ Recommended: ship #1 in v0.1.1; ship #2 as opt-in in v0.2 (`pinned_httpx_client(
 
 ### #B2 🔴 Add `Idempotency-Key` plumbing on retry POST/PUT/PATCH
 
-**Severity:** CRITICAL · **Impact:** 5 · **Effort:** 2 · **Priority:** 2.50 · **GH:** _unfiled_
+**Severity:** CRITICAL · **Impact:** 5 · **Effort:** 2 · **Priority:** 2.50 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-b-correctness-security`) — `AsyncAPIClient.request()` gained `idempotency_key` + `auto_idempotency_key`; the `Idempotency-Key` header is resolved once before the `@resilient` retry loop (precedence: explicit > caller header > auto-gen, auto scoped to POST/PUT/PATCH). New ADR-0012; README + 4 unit tests (stable-across-retries, explicit, GET-skip, default-off). Bare `@retry` documented as caller's responsibility.
 
 **Where:** `src/resilience_kit/retry/decorator.py`; `src/resilience_kit/http_client/client.py`
 

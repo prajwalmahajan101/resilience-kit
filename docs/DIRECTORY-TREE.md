@@ -51,6 +51,7 @@ resilience-kit/
 │       ├── 0009-entry-point-precedence-chain.md
 │       ├── 0010-fastapi-adapter-shape.md
 │       ├── 0011-django-sync-async-bridge.md
+│       ├── 0012-idempotency-key-on-retried-writes.md  # [v0.1.1] Lane B #B2
 │       └── 0013-throttle-fail-mode.md      # [v0.1.1] Lane B #B8
 │
 ├── src/

@@ -71,7 +71,7 @@ Result: `__acall__` is unreachable code. Six occurrences across the file.
 
 ### #A3 🟡 Reconcile ADR-0009 vs ADR-0004 vs `_providers.py`
 
-**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_
+**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-a-quickwins`). Root cause was narrower than written: ADR-0009's numbered chain, ADR-0004, and `_providers.py` all already agree (EPs shadow builtins); only two ADR-0009 prose paragraphs claimed the reverse, and `test_builtin_resolves_first` carried the same false claim (it never installed a colliding EP). Fixed: amended ADR-0009 prose to match the code, renamed/clarified the misleading test, and added `test_entry_point_shadows_same_named_builtin` that installs a `fake` EP colliding with a `fake` builtin and proves the EP wins.
 
 **Where:**
 - `docs/adr/0004-entry-points-for-third-party-backends.md`

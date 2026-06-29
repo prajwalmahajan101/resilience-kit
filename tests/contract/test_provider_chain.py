@@ -58,14 +58,41 @@ def _install_fixture() -> None:
     )
 
 
-def test_builtin_resolves_first() -> None:
-    """A kit-shipped builtin (``memory``) wins over any same-named EP."""
+def test_builtin_resolves_when_no_entry_point_shadows_it() -> None:
+    """A builtin resolves when no installed EP shares its name (step 4).
+
+    The fake-third-party fixture registers ``fake`` — not ``memory`` —
+    so the entry-point lookup (step 3) misses and the builtin fallback
+    (step 4) returns ``InMemoryAsyncCache``. This does *not* prove a
+    builtin beats a same-named EP; the opposite is true (see
+    :func:`test_entry_point_shadows_same_named_builtin`).
+    """
     instance = resolve_provider(
         group="resilience_kit.cache_backends",
         name="memory",
         builtins={"memory": InMemoryAsyncCache},
     )
     assert isinstance(instance, InMemoryAsyncCache)
+
+
+def test_entry_point_shadows_same_named_builtin() -> None:
+    """An installed EP shadows a builtin of the SAME name — the EP wins (#A3).
+
+    Pins the precedence documented in ADR 0004 / ADR 0009 and implemented
+    in ``_providers.py``: entry-point lookup (step 3) runs *before* the
+    builtin fallback (step 4). Here both the installed fixture EP and the
+    ``builtins`` map use the name ``fake``; resolution must return the
+    fixture's ``FakeCache``, never the builtin ``InMemoryAsyncCache``.
+    """
+    from fake_third_party.cache import FakeCache  # noqa: PLC0415 — fixture import.
+
+    instance = resolve_provider(
+        group="resilience_kit.cache_backends",
+        name="fake",
+        builtins={"fake": InMemoryAsyncCache},
+    )
+    assert isinstance(instance, FakeCache)
+    assert not isinstance(instance, InMemoryAsyncCache)
 
 
 def test_entry_point_lookup_resolves_third_party() -> None:

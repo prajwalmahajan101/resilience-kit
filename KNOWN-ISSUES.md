@@ -172,7 +172,7 @@ Recommended: do both — qualify in README *and* enable the missing-import ignor
 
 ### #A9 🟢 Throttle Lua — call `redis.replicate_commands()` for Redis < 7 compatibility
 
-**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-a-quickwins`) — chose the deterministic-counter option (`INCR key:__seq`) over `replicate_commands()`; validated against `redis:6` + `valkey:8` (allowed-flags `[1,1,1,1,1,0,0]`, zcard=5)
 
 **Where:** `src/resilience_kit/throttle/lua_scripts.py:20-41` (SLIDING_WINDOW_LUA)
 

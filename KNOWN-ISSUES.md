@@ -756,6 +756,13 @@ Cross-post: HackerNews `Show HN`, Reddit `r/Python`, Lobste.rs.
 
 ## Snapshot table — all 35 issues
 
+> **Lane A status (2026-06-29):** all 10 Lane A items closed on branch
+> `fix/lane-a-quickwins` (#A8 and #A10 were already satisfied; the rest fixed).
+> Four extra CI gates (#A11–#A14) + a Makefile were ported from
+> `colending_partner`. See each issue's **Status** line above for detail. The
+> `GH` column below is unchanged — it tracks GitHub issue numbers, still unfiled.
+
+
 | ID | Severity | Title | Impact | Effort | Priority | Lane | GH |
 |---|:---:|---|:---:|:---:|:---:|:---:|---|
 | #A1 | 🟡 | Cookie / Set-Cookie redaction | 3 | 1 | 3.00 | A | _-_ |

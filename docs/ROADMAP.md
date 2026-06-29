@@ -263,18 +263,20 @@ Correctness + security fixes. Closes the two CRITICAL findings (SSRF redirect by
 | #B7 | 🟠 HIGH | `PostgresAuditBackend._ensure_pool` — switch `threading.Lock` → `asyncio.Lock` | KI #B7 |
 | #B8 | 🟠 HIGH | Throttle fail-mode — add `fail_mode: "open" \| "closed"` toggle + document per-pod multiplier | KI #B8 |
 
-### Lane C — v0.2.0 minor (target: ~3-4 weeks, 6 issues)
+### Lane C — v0.2.0 minor (✅ merged to `main` 2026-06-29; release cut pending)
 
 Observability surface becomes real; crypto rotation closed; ASGI Django finishes; fintech / PII pack ships.
 
-| ID | Title | Issue |
-|---|---|---|
-| #C1 | `MultiFernet` + key-versioning + rotation runbook | KI #C1 |
-| #C2 | `[prometheus]` extra — `prometheus_client`-backed `MetricsSink` | KI #C2 |
-| #C3 | `[otel]` extra — OpenTelemetry SDK wiring + trace propagation | KI #C3 |
-| #C4 | `[sentry]` extra or Sentry integration recipe | KI #C4 |
-| #C5 | Fintech / PII regex redactor pack (global + India patterns) | KI #C5 |
-| #C6 | DRF throttle ASGI compatibility — replace `asyncio.run` with bridged loop | KI #C6 |
+All 6 items merged via PR #39 (`feat/lane-c-v0.2.0` → `main`, rebase). New ADRs 0014/0015/0016; ADR-0011 amended; new extras `[prometheus]` / `[otel]` / `[sentry]`. The v0.2.0 version bump + tag + publish are a separate release step, **not** yet done.
+
+| ID | Title | Issue | Status |
+|---|---|---|---|
+| #C1 | `MultiFernet` + key-versioning + rotation runbook | KI #C1 | ✅ merged (ADR-0014) |
+| #C2 | `[prometheus]` extra — `prometheus_client`-backed `MetricsSink` | KI #C2 | ✅ merged (+ cardinality guard + shim, ADR-0015) |
+| #C3 | `[otel]` extra — OpenTelemetry SDK wiring + trace propagation | KI #C3 | ✅ merged (ADR-0016) |
+| #C4 | `[sentry]` extra or Sentry integration recipe | KI #C4 | ✅ merged (shipped the extra + sink) |
+| #C5 | Fintech / PII regex redactor pack (global + India patterns) | KI #C5 | ✅ merged |
+| #C6 | DRF throttle ASGI compatibility — replace `asyncio.run` with bridged loop | KI #C6 | ✅ merged (ADR-0011 amended) |
 
 ### Lane D — v0.3.0+ maturity (defer pending adoption signal, 11 issues)
 

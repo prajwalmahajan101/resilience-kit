@@ -768,6 +768,17 @@ Cross-post: HackerNews `Show HN`, Reddit `r/Python`, Lobste.rs.
 > ADRs 0006 + 0008 amended. The v0.1.1 release cut (version bump, CHANGELOG
 > release header, tag, publish) is intentionally **not** part of this branch.
 > See each issue's **Status** line above for detail.
+>
+> **Lane C status (2026-06-29) — MERGED to `main`:** all 6 Lane C items
+> (#C1–#C6) fixed and merged via stacked sub-PRs (#33–#38) under the umbrella
+> PR #39 (`feat/lane-c-v0.2.0` → `main`, **rebase** merge). New ADRs 0014 (#C1
+> MultiFernet rotation), 0015 (#C2 metrics cardinality), 0016 (#C3 trace
+> propagation); ADR-0011 amended (#C6). New extras `[prometheus]` / `[otel]` /
+> `[sentry]`; folded in the cardinality contract + free-function metrics shim.
+> The stale "ADR-0012" reference for #C1 was corrected to ADR-0014. The v0.2.0
+> release cut (version bump, CHANGELOG release header, tag, publish) is
+> intentionally **not** part of this work. See each issue's **Status** line
+> above for detail.
 
 
 | ID | Severity | Title | Impact | Effort | Priority | Lane | GH |

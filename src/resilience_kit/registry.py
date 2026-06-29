@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from resilience_kit.circuit_breaker.base import (
+    DEFAULT_EXCLUDED_EXCEPTIONS,
     AsyncBreaker,
     BreakerConfig,
     HealthSnapshot,
@@ -124,7 +125,9 @@ class ResilienceRegistry:
             success_threshold=int(
                 cb_over.get("success_threshold", defaults_cb.success_threshold),
             ),
-            excluded_exceptions=tuple(cb_over.get("excluded_exceptions", ())),
+            excluded_exceptions=tuple(
+                cb_over.get("excluded_exceptions", DEFAULT_EXCLUDED_EXCEPTIONS),
+            ),
         )
         return ServiceConfig(name=name, retry=retry, circuit_breaker=cb)
 

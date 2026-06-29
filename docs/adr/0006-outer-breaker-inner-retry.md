@@ -47,6 +47,30 @@ As a safety net for hand-stacked decorators, the retry loop hard-codes
 it immediately on both sync and async branches (lines 126 and 198).
 Even an inverted stack cannot retry past an OPEN breaker.
 
+## Decision — default excluded exceptions (#B3)
+
+A breaker counts failures to detect an unhealthy *downstream service*. But a
+caller raising `ValueError` for bad input, or a `KeyError`/`TypeError` from a
+programmer mistake, says nothing about the downstream's health. Counting these
+toward the failure window is a false-positive open that drops legitimate
+traffic.
+
+`BreakerConfig.excluded_exceptions` therefore defaults to a non-empty set
+(`circuit_breaker/base.py:DEFAULT_EXCLUDED_EXCEPTIONS`):
+
+```python
+(ValueError, TypeError, KeyError, AttributeError, AssertionError)
+```
+
+These are re-raised without recording a failure. This is opinionated —
+operators whose conventions differ override it per service via the
+`excluded_exceptions` override, and the registry honours that override
+(`registry.py`), falling back to the default set only when none is supplied.
+
+Note this is orthogonal to retryability: `ExternalServiceError` (upstream
+returned non-success) is *not* excluded — it is the canonical breaker-failure
+signal even though it is not retried.
+
 ## Consequences
 
 - An OPEN breaker short-circuits immediately. No retry log noise, no

@@ -171,11 +171,17 @@ async with AsyncAPIClient(service="partner_api") as client:
     # SSRF guard + DNS pin + outbound allow-list + breaker + retry + audit — all composed.
     data = await client.get("https://partner.example.com/v1/users/42")
 
+    # Safe retries on writes: one Idempotency-Key, reused across every retry.
+    await client.post("https://payments.example/charge", json=body,
+                      auto_idempotency_key=True)            # or idempotency_key="charge:42"
+
 token = FernetCipher.encrypt("very secret")
 plaintext = FernetCipher.decrypt(token)
 ```
 
 The DNS pin closes the classic validate→connect TOCTOU: the URL is validated *and* the resolved IPs are pinned into the same task-local `ContextVar` that the custom httpx resolver returns at dispatch time. A malicious zone that returns a public IP at validation and a private IP at request time gets blocked.
+
+For non-idempotent writes, `request()` (and `post`/`put`/`patch`) accept `idempotency_key=` or `auto_idempotency_key=True`. The key is resolved once **before** the retry loop, so a POST retried after a timeout sends the byte-identical `Idempotency-Key` on every attempt — the upstream dedupes instead of double-charging. See [ADR-0012](./docs/adr/0012-idempotency-key-on-retried-writes.md).
 
 ### Audit — `@log_inbound` / `@log_outbound`
 

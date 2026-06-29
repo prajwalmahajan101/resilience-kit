@@ -11,6 +11,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 - CI gates ported from `colending_partner`: a `pip-audit` (OSV) dependency-vuln job, a `uv lock --check` lockfile-drift job, a dead public-symbol check (`scripts/check_dead_symbols.py` + pre-commit hook), and a sticky PR status comment. (Lane A #A11–#A14)
 - `--cov-fail-under` coverage gate on the unit/contract CI job. (Lane A #A7)
 - `Makefile` with the local dev/CI-gate targets (`lint`, `types`, `test`, `audit`, `lock-check`, `dead-symbols`, `gate`).
+- `AsyncAPIClient.request()` (and the verb shortcuts) accept `idempotency_key=` and `auto_idempotency_key=`. The `Idempotency-Key` header is resolved once before the retry loop, so a POST/PUT/PATCH retried after a timeout sends the byte-identical key on every attempt — the upstream dedupes instead of double-processing (the canonical double-charge bug). Precedence: explicit key > caller header > auto-generated; auto-gen is scoped to POST/PUT/PATCH and off by default. New ADR-0012. (Lane B #B2)
 - Throttle `fail_mode` setting (`defaults.throttle.fail_mode`, default `"open"`). `"closed"` makes a Redis-backed throttle deny requests while degraded instead of falling back to the per-pod in-memory window — for hard upstream limits where the per-pod multiplier (N pods → N× the global limit during an outage) is unacceptable. Emits `throttle.fail_closed`. New ADR-0013. (Lane B #B8)
 
 ### Changed

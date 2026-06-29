@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
@@ -49,6 +50,11 @@ except ImportError as exc:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT: float = 30.0
+
+#: Methods for which auto-generating an idempotency key is meaningful — the
+#: non-idempotent verbs a retry could otherwise duplicate (double-charge).
+_IDEMPOTENCY_METHODS = frozenset({"POST", "PUT", "PATCH"})
+_IDEMPOTENCY_HEADER = "Idempotency-Key"
 
 
 @dataclass(slots=True)
@@ -126,6 +132,8 @@ class AsyncAPIClient:
         data: Any = None,
         content: bytes | str | None = None,
         auth: httpx.Auth | None = None,
+        idempotency_key: str | None = None,
+        auto_idempotency_key: bool = False,
     ) -> httpx.Response:
         """Issue a single HTTP request with full kit protection.
 
@@ -141,6 +149,14 @@ class AsyncAPIClient:
             auth: Optional :class:`httpx.Auth` for this call —
                 typically a :class:`~resilience_kit.http_client.auth.BearerAuth`
                 or :class:`~resilience_kit.http_client.auth.HMACAuth`.
+            idempotency_key: Explicit ``Idempotency-Key`` header value.
+                Resolved **once** here, before the retry loop, so every
+                retry attempt sends the byte-identical key — the downstream
+                can dedupe a retried POST instead of double-processing it.
+            auto_idempotency_key: When ``True`` and ``method`` is
+                POST/PUT/PATCH, generate a ``uuid4().hex`` key once and
+                reuse it across retries. Ignored if ``idempotency_key`` or
+                an ``Idempotency-Key`` header is already supplied.
 
         Returns:
             The :class:`httpx.Response`. Successful responses pass
@@ -159,6 +175,15 @@ class AsyncAPIClient:
         resolved_ips = resolve_and_validate(url) if self._check_ssrf else set()
         # 2. Allow-list check (defence-in-depth).
         assert_allowed_url(url)
+
+        # Resolve the idempotency key ONCE, before the @resilient retry loop,
+        # so each retry attempt reuses the same value (#B2).
+        headers = self._resolve_idempotency_header(
+            method=method,
+            headers=headers,
+            idempotency_key=idempotency_key,
+            auto_idempotency_key=auto_idempotency_key,
+        )
 
         host = (urlparse(url).hostname or "").lower()
         call_kwargs = {
@@ -181,6 +206,48 @@ class AsyncAPIClient:
             with pinned(pin_map):
                 return await self._send(**call_kwargs)
         return await self._send(**call_kwargs)
+
+    @staticmethod
+    def _resolve_idempotency_header(
+        *,
+        method: str,
+        headers: Mapping[str, str] | None,
+        idempotency_key: str | None,
+        auto_idempotency_key: bool,
+    ) -> Mapping[str, str] | None:
+        """Return headers with an ``Idempotency-Key`` resolved per precedence.
+
+        Precedence: an explicit ``idempotency_key`` argument wins; otherwise a
+        caller-supplied ``Idempotency-Key`` header is preserved as-is; otherwise
+        ``auto_idempotency_key`` generates one for unsafe methods. The value is
+        fixed here (before the retry loop) so every attempt sends the same key.
+
+        Args:
+            method: HTTP verb.
+            headers: Caller-supplied headers, if any.
+            idempotency_key: Explicit key value, or ``None``.
+            auto_idempotency_key: Whether to auto-generate for POST/PUT/PATCH.
+
+        Returns:
+            Headers including the resolved key, or the originals unchanged.
+        """
+        has_header = headers is not None and any(
+            k.lower() == _IDEMPOTENCY_HEADER.lower() for k in headers
+        )
+        if idempotency_key is None and (has_header or not auto_idempotency_key):
+            # Explicit key not given, and either the caller already set the
+            # header (preserved across retries) or auto-gen is off → no change.
+            return headers
+        if idempotency_key is None and method.upper() not in _IDEMPOTENCY_METHODS:
+            # Auto-gen requested but the verb is safe to retry as-is.
+            return headers
+
+        resolved = dict(headers) if headers else {}
+        # Drop any case-variant of the header so we don't emit duplicates.
+        for existing in [k for k in resolved if k.lower() == _IDEMPOTENCY_HEADER.lower()]:
+            del resolved[existing]
+        resolved[_IDEMPOTENCY_HEADER] = idempotency_key or uuid.uuid4().hex
+        return resolved
 
     async def _raw_send(
         self,

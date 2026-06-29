@@ -1,9 +1,17 @@
 """Pluggable metrics sink — RED metrics for retry, breaker, throttle, http_client.
 
 The kit emits metric events through a tiny :class:`MetricsSink` protocol;
-real sinks (Prometheus, OTel, statsd) are wired in by the caller. Builtin
-sinks: :class:`NoopMetricsSink` (default) and :class:`StdlibLoggingMetricsSink`
-(M4 ships a real factory).
+real sinks are wired in by the caller. Builtin sinks: :class:`NoopMetricsSink`
+(default) and :class:`StdlibLoggingMetricsSink`. The ``[prometheus]`` extra adds
+``resilience_kit.metrics.prometheus.PrometheusMetricsSink`` and the ``[otel]``
+extra adds ``resilience_kit.metrics.otel.OtelMetricsSink`` — both loaded only
+when selected, so this package imports cleanly without those deps installed.
+
+:class:`~resilience_kit.metrics.cardinality.BoundedMetricsSink` wraps any sink
+to cap label cardinality; enable it via ``settings.metrics_cardinality_budget``.
+The :func:`record_counter` / :func:`record_duration` / :func:`record_gauge`
+free functions are a thin shim over :func:`get_metrics` for call sites that
+prefer functions to holding a sink reference.
 """
 
 from __future__ import annotations
@@ -11,6 +19,8 @@ from __future__ import annotations
 import logging
 import threading
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+from resilience_kit.metrics.cardinality import BoundedMetricsSink
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -174,9 +184,10 @@ def _resolve_from_settings() -> MetricsSink:
     from resilience_kit.exceptions import UnknownBackendError  # noqa: PLC0415
     from resilience_kit.runtime import get_settings  # noqa: PLC0415
 
-    name = get_settings().metrics_sink
+    settings = get_settings()
+    name = settings.metrics_sink
     try:
-        return resolve_provider(
+        sink: MetricsSink = resolve_provider(
             group=_METRICS_GROUP,
             name=name,
             builtins=_BUILTIN_SINKS,
@@ -186,7 +197,12 @@ def _resolve_from_settings() -> MetricsSink:
             "metrics_sink=%r did not resolve; falling back to no-op.",
             name,
         )
-        return NoopMetricsSink()
+        sink = NoopMetricsSink()
+
+    budget = settings.metrics_cardinality_budget
+    if budget is not None:
+        return BoundedMetricsSink(sink, cardinality_budget=budget)
+    return sink
 
 
 def set_metrics(sink: MetricsSink) -> None:
@@ -205,3 +221,49 @@ def reset_metrics() -> None:
     global _sink  # noqa: PLW0603
     with _lock:
         _sink = None
+
+
+# --- Free-function shim over the resolved sink ------------------------------
+# Lets call sites record metrics without threading a MetricsSink reference
+# through, while still teeing into the pluggable backend.
+
+
+def record_counter(
+    name: str,
+    value: float = 1.0,
+    tags: Mapping[str, str] | None = None,
+) -> None:
+    """Increment a counter on the active sink (see :meth:`MetricsSink.incr`)."""
+    get_metrics().incr(name, value, tags)
+
+
+def record_duration(
+    name: str,
+    value_ms: float,
+    tags: Mapping[str, str] | None = None,
+) -> None:
+    """Record a duration on the active sink (see :meth:`MetricsSink.timing`)."""
+    get_metrics().timing(name, value_ms, tags)
+
+
+def record_gauge(
+    name: str,
+    value: float,
+    tags: Mapping[str, str] | None = None,
+) -> None:
+    """Set a gauge on the active sink (see :meth:`MetricsSink.gauge`)."""
+    get_metrics().gauge(name, value, tags)
+
+
+__all__ = [
+    "BoundedMetricsSink",
+    "MetricsSink",
+    "NoopMetricsSink",
+    "StdlibLoggingMetricsSink",
+    "get_metrics",
+    "record_counter",
+    "record_duration",
+    "record_gauge",
+    "reset_metrics",
+    "set_metrics",
+]

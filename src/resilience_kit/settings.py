@@ -187,6 +187,13 @@ class ResilienceSettings(BaseSettings):
     backend: Literal["auto", "memory", "redis", "pybreaker"] = "auto"
     redis_url: str | None = None
     metrics_sink: str = "noop"
+    #: When set, the resolved metrics sink is wrapped in a
+    #: ``BoundedMetricsSink`` that caps distinct tag-value combinations per
+    #: metric at this budget (a stray high-cardinality label — e.g.
+    #: ``request_id`` — is dropped and counted via ``metrics.cardinality_exceeded``
+    #: instead of exploding the backend). ``None`` (default) disables the
+    #: guard. Recommended when ``metrics_sink`` is a real exporter.
+    metrics_cardinality_budget: int | None = None
     defaults: Defaults = Field(default_factory=Defaults)
     ssrf: SSRFSettings = Field(default_factory=SSRFSettings)
     crypto: CryptoSettings = Field(default_factory=CryptoSettings)

@@ -445,7 +445,7 @@ Recommended: option 3. Default stays fail-open for ergonomics; fintech users can
 
 ### #C2 🟠 Add `[prometheus]` extra with `prometheus_client`-backed `MetricsSink`
 
-**Severity:** HIGH · **Impact:** 5 · **Effort:** 4 · **Priority:** 1.25 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 5 · **Effort:** 4 · **Priority:** 1.25 · **GH:** _unfiled_ · **Status:** `fixed` (branch `feat/c2-prometheus` → `feat/lane-c-v0.2.0`) — `metrics.py` → `metrics/` package; `PrometheusMetricsSink` (`[prometheus]` extra + entry point); **folded in** `BoundedMetricsSink` cardinality guard (`settings.metrics_cardinality_budget`) + `record_counter/duration/gauge` shim (parking-lot v0.2 items, the dogfooding #1 prod risk). ADR-0015. **NB:** the metric-key list in the fix text below is stale — there is no `throttle.allowed`/`throttle.denied`; the exporter maps the *real* emitted keys (`breaker.short_circuit/reset/...`, `throttle.fail_closed/recovered/degraded`, `cache.*`, `audit.*`, `tasks.*`). 18 tests.
 
 **Where:** New `src/resilience_kit/metrics/prometheus.py`; `pyproject.toml` `[project.optional-dependencies]`
 

@@ -6,6 +6,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ### Added
 
+- Field-crypto key rotation via `MultiFernet`. `settings.crypto.field_encryption_keys` is now an ordered list (primary first; trailing keys decrypt-only): encryption uses the primary, decryption tries each key, so ciphertext written under a retired key still decrypts. `FernetCipher.rotate(token)` re-encrypts an existing token under the current primary without exposing plaintext. The singular `field_encryption_key` is kept as a deprecated alias for one minor cycle. New ADR-0014 + `docs/key-rotation.md` runbook. (Lane C #C1)
 - Value-scanning audit redactors: `RegexRedactor` (field-name matching plus regex over string leaves) and the batteries-included `IndiaFintechRedactor`, registered under the `india_fintech` sanitiser entry point. Ship `GLOBAL_PII_PATTERNS` (email, IBAN, Luhn-checked credit card) and `INDIA_PII_PATTERNS` (PAN, IFSC, Indian mobile, Aadhaar, bank account) so PII embedded *inside* an innocuous field value (e.g. `{"notes": "PAN ABCDE1234F"}`) is masked, not just whole sensitive keys. Select via `RESILIENCE_AUDIT__SANITIZER=india_fintech`. (Lane C #C5)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant v2.1. Linked from README and `CONTRIBUTING.md`. (Lane A #A6)
 - `.github/workflows/dependabot-automerge.yml` — auto-merges Dependabot patch/minor PRs once required checks pass; majors stay manual. (Lane A #A5)

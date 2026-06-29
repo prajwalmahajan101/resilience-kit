@@ -57,35 +57,86 @@ class SSRFSettings(BaseModel):
     outbound_allowlist: list[str] = Field(default_factory=lambda: ["*"])
 
 
+def _warn_if_weak_key(value: SecretStr) -> None:
+    """Warn when ``value`` is a short passphrase rather than a real Fernet key.
+
+    A real Fernet key is 44 url-safe-base64 chars (32 raw bytes); anything
+    shorter is a passphrase that will be SHA-256-derived (deprecated, weak —
+    see #B6). A warning, not an error, to stay non-breaking.
+    """
+    if len(value.get_secret_value()) < 32:
+        warnings.warn(
+            "crypto field-encryption key looks like a short passphrase; "
+            "supply a real Fernet key (Fernet.generate_key()) for proper "
+            "key strength. Passphrase keys are SHA-256-derived (deprecated).",
+            stacklevel=3,
+        )
+
+
 class CryptoSettings(BaseModel):
     """Field-level Fernet crypto settings (LLD §10).
 
     ``environment`` gates the "refuse to start without a key" guard. The
-    default ``"prod"`` means a missing ``field_encryption_key`` is a
-    configuration error; ``"dev"`` / ``"test"`` fall back to a static
-    well-known dev key with a one-time warning so local boots work.
+    default ``"prod"`` means missing key material is a configuration
+    error; ``"dev"`` / ``"test"`` fall back to a static well-known dev
+    key with a one-time warning so local boots work.
+
+    Key material is an *ordered* list, ``field_encryption_keys`` (primary
+    first, older keys decrypt-only), backing ``MultiFernet`` rotation
+    (ADR-0014). The singular ``field_encryption_key`` is a deprecated
+    alias retained for one minor cycle; when set alone it becomes the
+    sole key.
     """
 
+    field_encryption_keys: list[SecretStr] = Field(default_factory=list)
     field_encryption_key: SecretStr | None = None
     environment: Literal["prod", "dev", "test"] = "prod"
 
     @field_validator("field_encryption_key")
     @classmethod
-    def _warn_on_weak_key(cls, v: SecretStr | None) -> SecretStr | None:
-        """Warn when the key is a short passphrase rather than a real Fernet key.
+    def _warn_on_weak_singular(cls, v: SecretStr | None) -> SecretStr | None:
+        if v is not None:
+            _warn_if_weak_key(v)
+        return v
 
-        A real Fernet key is 44 url-safe-base64 chars (32 raw bytes); anything
-        shorter is a passphrase that will be SHA-256-derived (deprecated, weak —
-        see #B6). This is a warning, not an error, to stay non-breaking.
+    @field_validator("field_encryption_keys")
+    @classmethod
+    def _warn_on_weak_list(cls, v: list[SecretStr]) -> list[SecretStr]:
+        for key in v:
+            _warn_if_weak_key(key)
+        return v
+
+    def ordered_keys(self) -> list[str]:
+        """Return configured key material in priority order (primary first).
+
+        Prefers ``field_encryption_keys``; falls back to the deprecated
+        singular ``field_encryption_key`` with a :class:`DeprecationWarning`.
+        Empty when no key is configured (the caller applies the env guard /
+        dev fallback).
+
+        Returns:
+            Secret values, primary first; empty list when unset.
         """
-        if v is not None and len(v.get_secret_value()) < 32:
+        if self.field_encryption_keys:
+            if self.field_encryption_key is not None:
+                warnings.warn(
+                    "Both crypto.field_encryption_keys and the deprecated "
+                    "field_encryption_key are set; the list wins and the "
+                    "singular value is ignored.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            return [k.get_secret_value() for k in self.field_encryption_keys]
+        if self.field_encryption_key is not None:
             warnings.warn(
-                "crypto.field_encryption_key looks like a short passphrase; "
-                "supply a real Fernet key (Fernet.generate_key()) for proper "
-                "key strength. Passphrase keys are SHA-256-derived (deprecated).",
+                "crypto.field_encryption_key is deprecated; use the ordered "
+                "field_encryption_keys list (primary first) for MultiFernet "
+                "rotation. The singular alias is retained for one minor cycle.",
+                DeprecationWarning,
                 stacklevel=2,
             )
-        return v
+            return [self.field_encryption_key.get_secret_value()]
+        return []
 
 
 class RecoverySettings(BaseModel):

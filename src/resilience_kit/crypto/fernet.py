@@ -6,15 +6,25 @@ the SQLAlchemy ``EncryptedString`` (M5) and the Django
 
 Key resolution (#B6):
 
-* If ``field_encryption_key`` is already a valid Fernet key (32 url-safe
-  base64 bytes, e.g. from ``Fernet.generate_key()``) it is used **directly**.
+* If a configured key is already a valid Fernet key (32 url-safe base64
+  bytes, e.g. from ``Fernet.generate_key()``) it is used **directly**.
   This is the recommended path — give the kit a real key.
 * Otherwise the value is treated as a passphrase and the key is derived via
   ``base64.urlsafe_b64encode(sha256(passphrase))``. This path is **deprecated**
   (unsalted, no work factor — weak for low-entropy passphrases) and emits a
   one-time warning. It is retained only so data encrypted by earlier versions
-  still decrypts; supply a real Fernet key for new deployments. Salted-KDF /
-  key-rotation hardening lands with ``MultiFernet`` (Lane C #C1).
+  still decrypts; supply a real Fernet key for new deployments.
+
+Key rotation (#C1, ADR-0014):
+
+* ``settings.crypto.field_encryption_keys`` is an *ordered* list — primary
+  first, then older keys kept for decrypt-only. The cipher is a
+  :class:`~cryptography.fernet.MultiFernet`: it encrypts with the primary and
+  decrypts by trying each key in turn, so an old token written under a retired
+  key still decrypts. No explicit per-token key-version prefix is needed —
+  Fernet tokens already carry a version byte + timestamp and ``MultiFernet``
+  trials each key. :meth:`FernetCipher.rotate` re-encrypts an existing token
+  under the current primary without exposing plaintext.
 
 A dedicated ``field_encryption_key`` (vs. reusing an application
 ``secret_key``) means that routine rotation of any other secret cannot
@@ -49,7 +59,7 @@ from resilience_kit.exceptions import MissingExtraError
 from resilience_kit.runtime import get_settings
 
 try:
-    from cryptography.fernet import Fernet, InvalidToken
+    from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 except ImportError as exc:  # pragma: no cover
     raise MissingExtraError("crypto", "resilience-kit[crypto]") from exc
 
@@ -62,46 +72,43 @@ _DEV_FALLBACK_KEY = "resilience-kit::dev-only-insecure::do-not-use-in-prod"
 
 
 @functools.lru_cache(maxsize=1)
-def _fernet() -> Fernet:
-    """Return the process-wide :class:`Fernet` instance, built lazily.
+def _fernet() -> MultiFernet:
+    """Return the process-wide :class:`MultiFernet` instance, built lazily.
 
-    The instance is cached so every encrypt/decrypt uses the same key
-    without re-deriving the SHA-256 digest. Tests reset the cache via
-    :func:`reset_fernet_cache`.
+    The instance is cached so every encrypt/decrypt reuses the resolved
+    keys without re-deriving them. Encryption uses the primary (first)
+    key; decryption tries each configured key in order. Tests reset the
+    cache via :func:`reset_fernet_cache`.
 
     Returns:
-        Configured :class:`Fernet` ready for ``encrypt`` / ``decrypt``.
+        Configured :class:`MultiFernet` ready for ``encrypt`` /
+        ``decrypt`` / ``rotate``.
 
     Raises:
-        FernetUnavailableError: ``cryptography`` is missing — should be
-            impossible since the import guard at module load would have
-            raised :class:`MissingExtraError` first; included for
-            type-safety symmetry with the public API.
-        EncryptionConfigError: ``field_encryption_key`` is unset in a
-            non-dev environment.
+        EncryptionConfigError: No key material is configured in a non-dev
+            environment.
     """
     settings = get_settings()
-    secret = settings.crypto.field_encryption_key
-    if secret is not None:
-        key_source = secret.get_secret_value()
-    else:
-        if settings.crypto.environment == "prod":
-            raise EncryptionConfigError(
-                "field_encryption_key must be set when "
-                "settings.crypto.environment='prod'. Silent fallback is "
-                "disabled to prevent data corruption on key rotation.",
-                details={"environment": settings.crypto.environment},
-            )
-        logger.warning(
-            "FernetCipher: field_encryption_key not set; using insecure dev "
-            "fallback (environment=%s).",
-            settings.crypto.environment,
+    key_sources = settings.crypto.ordered_keys()
+    if key_sources:
+        return MultiFernet(
+            [Fernet(_resolve_fernet_key(k, warn_on_legacy=True)) for k in key_sources],
         )
-        key_source = _DEV_FALLBACK_KEY
 
+    if settings.crypto.environment == "prod":
+        raise EncryptionConfigError(
+            "field_encryption_key must be set (or the field_encryption_keys "
+            "list) when settings.crypto.environment='prod'. Silent fallback is "
+            "disabled to prevent data corruption on key rotation.",
+            details={"environment": settings.crypto.environment},
+        )
+    logger.warning(
+        "FernetCipher: no field-encryption key set; using insecure dev fallback (environment=%s).",
+        settings.crypto.environment,
+    )
     # The dev fallback is intentionally a passphrase and already warned about
     # above; don't double-warn it as a deprecated derivation.
-    return Fernet(_resolve_fernet_key(key_source, warn_on_legacy=secret is not None))
+    return MultiFernet([Fernet(_resolve_fernet_key(_DEV_FALLBACK_KEY, warn_on_legacy=False))])
 
 
 def _resolve_fernet_key(key_source: str, *, warn_on_legacy: bool) -> bytes:
@@ -202,6 +209,42 @@ class FernetCipher:
             )
             raise DecryptionError(
                 "Failed to decrypt field value. Check field_encryption_key.",
+            ) from exc
+
+    @staticmethod
+    def rotate(token: str) -> str:
+        """Re-encrypt ``token`` under the current primary key.
+
+        Decrypts with whichever configured key wrote the token and
+        re-encrypts under the primary, without exposing plaintext. Use
+        during key rotation to migrate stored ciphertext off a retired
+        key onto the new primary (see ``docs/key-rotation.md``).
+
+        Empty strings pass through unchanged, mirroring :meth:`encrypt`.
+
+        Args:
+            token: An existing Fernet token written under any configured key.
+
+        Returns:
+            A new token encrypted under the primary key, or the original
+            empty string.
+
+        Raises:
+            EncryptionConfigError: No key material is configured in a
+                non-dev environment.
+            DecryptionError: The token is not decryptable under any
+                configured key (retired beyond the key list, or corrupt).
+        """
+        if not token:
+            return token
+        try:
+            return _fernet().rotate(token.encode("ascii")).decode("ascii")
+        except InvalidToken as exc:
+            logger.error(
+                "FernetCipher rotate failed — token not decryptable under any configured key.",
+            )
+            raise DecryptionError(
+                "Failed to rotate field value. The token's key is not in field_encryption_keys.",
             ) from exc
 
 

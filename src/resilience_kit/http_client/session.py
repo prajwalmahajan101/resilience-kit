@@ -37,6 +37,15 @@ except ImportError as exc:  # pragma: no cover
 def pinned_httpx_client(**kwargs: Any) -> httpx.AsyncClient:
     """Return an ``httpx.AsyncClient`` whose transport honours :data:`pinned_dns`.
 
+    Redirects are forced **off** (``follow_redirects=False``). The DNS pin is
+    established for the *original* request host only; httpx following a 3xx to a
+    new host would resolve that host through normal DNS, never re-validated
+    against SSRF and never re-pinned — so an open redirect to
+    ``http://169.254.169.254/`` (cloud metadata) or an internal IP would defeat
+    the pin entirely (CWE-918 + CWE-601). Callers that genuinely need redirects
+    must follow them by hand, calling ``resolve_and_validate()`` on each hop's
+    ``Location`` before issuing the next request.
+
     Args:
         **kwargs: Forwarded to :class:`httpx.AsyncClient`. A caller-
             supplied ``transport=`` overrides the default pinned
@@ -45,7 +54,21 @@ def pinned_httpx_client(**kwargs: Any) -> httpx.AsyncClient:
 
     Returns:
         A fresh :class:`httpx.AsyncClient` ready for ``async with``.
+
+    Raises:
+        ValueError: ``follow_redirects=True`` was passed. Auto-following
+            redirects bypasses the DNS pin; this is refused loudly rather
+            than silently overridden.
     """
+    if kwargs.get("follow_redirects"):
+        msg = (
+            "pinned_httpx_client refuses follow_redirects=True: auto-followed "
+            "redirects bypass the DNS pin (the redirect host is never "
+            "re-validated against SSRF). Follow redirects manually and call "
+            "resolve_and_validate() on each hop instead."
+        )
+        raise ValueError(msg)
+    kwargs["follow_redirects"] = False
     kwargs.setdefault("transport", PinnedHTTPTransport())
     return httpx.AsyncClient(**kwargs)
 

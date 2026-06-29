@@ -30,6 +30,7 @@ import httpx
 from resilience_kit.exceptions import ValidationError
 from resilience_kit.http_client.client import AsyncAPIClient
 from resilience_kit.http_client.dns_pin import PinnedHTTPTransport, _pick_pinned_ip
+from resilience_kit.http_client.session import pinned_httpx_client
 
 pytestmark = pytest.mark.integration
 
@@ -137,3 +138,32 @@ async def test_dns_rebinding_when_validator_sees_private_is_rejected() -> None:
         pytest.raises(ValidationError, match="non-public"),
     ):
         await client.get("https://partner.example/v1/x")
+
+
+@pytest.mark.asyncio
+async def test_pinned_client_does_not_follow_redirects() -> None:
+    """#B1: a 302 to a private host is surfaced, not auto-followed.
+
+    Auto-following resolves the redirect target through normal DNS, never
+    re-validated against SSRF and never re-pinned — an open redirect to a
+    private IP or cloud metadata would defeat the pin (CWE-918 + CWE-601).
+    """
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(str(request.url))
+        return httpx.Response(302, headers={"Location": "http://10.0.0.5/internal"})
+
+    async with pinned_httpx_client(transport=httpx.MockTransport(handler)) as client:
+        resp = await client.get("https://partner.example/start")
+
+    assert resp.status_code == 302
+    assert resp.headers["location"] == "http://10.0.0.5/internal"
+    # The redirect was returned to the caller, not chased — only one request fired.
+    assert calls == ["https://partner.example/start"]
+
+
+def test_pinned_client_refuses_follow_redirects_true() -> None:
+    """#B1: opting into auto-redirects is refused loudly, not silently overridden."""
+    with pytest.raises(ValueError, match="follow_redirects=True"):
+        pinned_httpx_client(follow_redirects=True)

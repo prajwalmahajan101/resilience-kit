@@ -225,7 +225,7 @@ Added alongside Lane A on branch `fix/lane-a-quickwins`, mirroring the
 
 ### #B1 🔴 SSRF redirect bypass — re-validate / re-pin on 3xx
 
-**Severity:** CRITICAL · **Impact:** 5 · **Effort:** 2 · **Priority:** 2.50 · **GH:** _unfiled_
+**Severity:** CRITICAL · **Impact:** 5 · **Effort:** 2 · **Priority:** 2.50 · **GH:** _unfiled_ · **Status:** `fixed` via option 1 (branch `fix/lane-b-correctness-security`) — `pinned_httpx_client()` forces `follow_redirects=False` and raises `ValueError` on an explicit `follow_redirects=True`; added two tests to `tests/integration/test_dns_rebinding.py` (302→private not followed; opt-in refused). Per-hop re-validating handler (option 2) deferred to v0.2.
 
 **Where:** `src/resilience_kit/http_client/{session,client,dns_pin}.py`
 

@@ -53,7 +53,7 @@ Each fits in <1 day. Total effort ~6 hours. Closes 10 issues, lifts OSS-readines
 
 ### #A2 🟡 Remove dead `__acall__` methods from Django middleware
 
-**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_
+**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 1 · **Priority:** 3.00 · **GH:** _unfiled_ · **Status:** `fixed` via option (a) (branch `fix/lane-a-quickwins`) — 6 `__acall__` deleted, docstring corrected, dispatch-shape guard test added; native async deferred to #C6/#D2
 
 **Where:** `src/resilience_kit/adapters/django/middleware.py:105, 150, 190, 240, 282, 322`
 

@@ -269,7 +269,7 @@ For the bare `@retry` decorator (no HTTP context), document this is the caller's
 
 ### #B3 🟠 `excluded_exceptions` non-empty default — don't open breaker on caller `ValueError`/`TypeError`
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-b-correctness-security`) — `DEFAULT_EXCLUDED_EXCEPTIONS = (ValueError, TypeError, KeyError, AttributeError, AssertionError)` now the `BreakerConfig` default and the `registry.py` fallback; amended ADR-0006; added a contract test asserting the default excludes `ValueError` across backends.
 
 **Where:** `src/resilience_kit/circuit_breaker/{memory_impl,redis_impl}.py`; `BreakerConfig` dataclass
 

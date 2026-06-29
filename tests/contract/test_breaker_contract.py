@@ -119,6 +119,26 @@ async def test_excluded_exceptions_do_not_count(
     assert await breaker.state() is BreakerState.CLOSED
 
 
+async def test_default_excluded_exceptions_do_not_count(
+    breaker_factory: Callable[..., AsyncBreaker],
+    clock: FakeClock,
+) -> None:
+    """The default config excludes caller/programmer errors (#B3).
+
+    With no explicit ``excluded_exceptions``, a ``ValueError`` raised by
+    business logic must NOT trip a transport-failure breaker.
+    """
+    breaker = breaker_factory("svc", BreakerConfig(fail_max=2), clock=clock)
+
+    async def raises_value() -> None:
+        raise ValueError("bad input — not the service's fault")
+
+    for _ in range(5):
+        with pytest.raises(ValueError):
+            await breaker.call(raises_value)
+    assert await breaker.state() is BreakerState.CLOSED
+
+
 async def test_cancellation_does_not_count(
     breaker_factory: Callable[..., AsyncBreaker],
     clock: FakeClock,

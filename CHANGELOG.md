@@ -14,6 +14,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ### Changed
 
+- `BreakerConfig.excluded_exceptions` now defaults to `(ValueError, TypeError, KeyError, AttributeError, AssertionError)` instead of `()`. These caller/programmer errors no longer trip a transport-failure breaker — a `ValueError` from business logic kept legitimate traffic flowing instead of forcing the circuit OPEN. Overridable per service; the registry falls back to this set only when no override is supplied. (Lane B #B3)
 - Classifier `Development Status :: 3 - Alpha` → `4 - Beta` — the surface has a locked API, a migration guide, two adopter dogfood reports, and Trusted Publishing. (Lane A #A4)
 - `DefaultRedactor.DEFAULT_FIELDS` now redacts `cookie` / `set-cookie` by default — session cookies are auth-bearing (CWE-532). (Lane A #A1)
 - Sliding-window throttle Lua uses a deterministic `INCR` counter for ZSET member ids instead of `math.random`, fixing non-determinism that Redis < 7 rejects. (Lane A #A9)

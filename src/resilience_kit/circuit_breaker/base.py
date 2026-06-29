@@ -17,6 +17,23 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
+#: Exceptions that never count as a breaker failure by default.
+#:
+#: These are caller/programmer errors (bad input, wrong types, missing keys),
+#: not signals about the downstream service's health. Tripping a
+#: transport-failure breaker on a ``ValueError`` raised by business logic is a
+#: false-positive open that drops legitimate traffic. Opinionated but
+#: overridable per service via the ``excluded_exceptions`` override. See
+#: ADR-0006.
+DEFAULT_EXCLUDED_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    ValueError,
+    TypeError,
+    KeyError,
+    AttributeError,
+    AssertionError,
+)
+
+
 class BreakerState(StrEnum):
     """State of the circuit breaker.
 
@@ -42,7 +59,7 @@ class BreakerConfig:
     fail_max: int = 5
     reset_timeout: float = 30.0
     success_threshold: int = 2
-    excluded_exceptions: tuple[type[BaseException], ...] = ()
+    excluded_exceptions: tuple[type[BaseException], ...] = DEFAULT_EXCLUDED_EXCEPTIONS
 
 
 @dataclass(frozen=True, slots=True)

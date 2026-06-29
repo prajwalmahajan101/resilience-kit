@@ -4,6 +4,36 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- `CODE_OF_CONDUCT.md` — Contributor Covenant v2.1. Linked from README and `CONTRIBUTING.md`. (Lane A #A6)
+- `.github/workflows/dependabot-automerge.yml` — auto-merges Dependabot patch/minor PRs once required checks pass; majors stay manual. (Lane A #A5)
+- CI gates ported from `colending_partner`: a `pip-audit` (OSV) dependency-vuln job, a `uv lock --check` lockfile-drift job, a dead public-symbol check (`scripts/check_dead_symbols.py` + pre-commit hook), and a sticky PR status comment. (Lane A #A11–#A14)
+- `--cov-fail-under` coverage gate on the unit/contract CI job. (Lane A #A7)
+- `Makefile` with the local dev/CI-gate targets (`lint`, `types`, `test`, `audit`, `lock-check`, `dead-symbols`, `gate`).
+
+### Changed
+
+- Classifier `Development Status :: 3 - Alpha` → `4 - Beta` — the surface has a locked API, a migration guide, two adopter dogfood reports, and Trusted Publishing. (Lane A #A4)
+- `DefaultRedactor.DEFAULT_FIELDS` now redacts `cookie` / `set-cookie` by default — session cookies are auth-bearing (CWE-532). (Lane A #A1)
+- Sliding-window throttle Lua uses a deterministic `INCR` counter for ZSET member ids instead of `math.random`, fixing non-determinism that Redis < 7 rejects. (Lane A #A9)
+
+### Fixed
+
+- `cache.provider.get_cache()` no longer crashes. The `memory` entry point resolves to `InMemoryAsyncCache` directly (shadowing the `_build_memory` adapter), which was then called with an `alias` kwarg it did not accept. `InMemoryAsyncCache.__init__` now accepts and ignores `alias`, matching the adapter's contract. Surfaced by the new dead-symbol gate (#A14); the function had no caller. Added a provider unit test.
+
+### Security
+
+- Bumped vulnerable locked dependencies flagged by the new `pip-audit` (OSV) gate: `cryptography` 48.0.0 → 49.0.0 (GHSA-537c-gmf6-5ccf), `pydantic-settings` 2.14.1 → 2.14.2 (GHSA-4xgf-cpjx-pc3j), `starlette` 1.2.1 → 1.3.1 (PYSEC-2026-248/249). Lockfile only; no API change.
+
+### Removed
+
+- Six unreachable `async def __acall__` methods in the Django adapter middleware — Django has no `__acall__` dispatch hook. (Lane A #A2)
+
+### Documentation
+
+- Amended ADR-0009 prose to match the implemented (and ADR-0004) resolution order: third-party entry points shadow same-named kit builtins. Added a contract test proving it. (Lane A #A3)
+
 ## [0.1.0] - 2026-06-11
 
 First public stable release. Pinned by both reference boilerplates (`fastapi_boilerplate`, `django_boilerplate`) post-M7 migration. Builds on `0.1.0rc1` with the §3.1 pre-cut ergonomics bundle (D1 helpers A–E) that closes every M7 dogfooding finding flagged as high-severity. Surface is additive — `rc1` users upgrade with a pin bump unless they hit the blocker recipes documented in [`docs/MIGRATION-rc1-to-v0.1.0.md`](./docs/MIGRATION-rc1-to-v0.1.0.md).

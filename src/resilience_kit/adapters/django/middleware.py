@@ -4,10 +4,16 @@ The kit's ASGI classes (under ``resilience_kit.middleware``) consume
 ``scope / receive / send`` — incompatible with Django's
 ``get_response(request) -> response`` contract. Each class here
 re-implements the *semantics* of one kit ASGI middleware against
-Django's request / response objects. Both sync and async modes are
-supported via ``sync_capable`` + ``async_capable``; Django picks the
-right path at install time based on whether the project uses WSGI or
-ASGI.
+Django's request / response objects.
+
+These are **sync middleware** — each exposes a synchronous ``__call__``.
+They declare ``async_capable = True`` so Django accepts them under ASGI,
+but because ``__call__`` is synchronous Django adapts them via
+``asgiref.sync.sync_to_async`` at the boundary (it dispatches ``__call__``,
+never a separate ``__acall__`` — Django has no such hook). Native async
+middleware — avoiding the threadpool hop and preserving the request-id
+ContextVar across the async boundary — is tracked as KNOWN-ISSUES #C6/#D2
+and lands with the Lane C ASGI-Django fix.
 
 Why duplicate rather than wrap: the adapters never own business
 logic, but they DO own the framework's request shape. Wrapping the
@@ -102,17 +108,6 @@ class RequestIdMiddleware:
             request_id_var.reset(token_req)
             correlation_id_var.reset(token_corr)
 
-    async def __acall__(self, request: HttpRequest) -> HttpResponse:
-        """Async path — same shape as ``__call__`` but awaits the inner."""
-        token_req, token_corr, ids = self._enter(request)
-        try:
-            response = await self.get_response(request)
-            self._tag_response(response, ids)
-            return response
-        finally:
-            request_id_var.reset(token_req)
-            correlation_id_var.reset(token_corr)
-
     def _enter(self, request: HttpRequest) -> tuple[Any, Any, tuple[str, str]]:
         incoming_req = request.headers.get(self._req_header) or new_request_id()
         incoming_corr = request.headers.get(self._corr_header) or incoming_req
@@ -147,12 +142,6 @@ class BodyLimitMiddleware:
             return HttpResponse(status=413)
         return self.get_response(request)
 
-    async def __acall__(self, request: HttpRequest) -> HttpResponse:
-        """Async path."""
-        if self._exceeds(request):
-            return HttpResponse(status=413)
-        return await self.get_response(request)
-
     def _exceeds(self, request: HttpRequest) -> bool:
         length = request.headers.get("Content-Length")
         if length is None:
@@ -184,12 +173,6 @@ class SecurityHeadersMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         """Sync path."""
         response = self.get_response(request)
-        self._apply(response)
-        return response
-
-    async def __acall__(self, request: HttpRequest) -> HttpResponse:
-        """Async path."""
-        response = await self.get_response(request)
         self._apply(response)
         return response
 
@@ -237,13 +220,6 @@ class SelectiveCorsMiddleware:
             self._apply(request, response)
         return response
 
-    async def __acall__(self, request: HttpRequest) -> HttpResponse:
-        """Async path."""
-        response = await self.get_response(request)
-        if self._opted_in(request):
-            self._apply(request, response)
-        return response
-
     def _opted_in(self, request: HttpRequest) -> bool:
         if not self._prefixes or not self._allow_origins:
             return False
@@ -279,13 +255,6 @@ class RateLimitHeadersMiddleware:
         except RateLimitError as exc:
             return _rate_limit_response(exc)
 
-    async def __acall__(self, request: HttpRequest) -> HttpResponse:
-        """Async path."""
-        try:
-            return await self.get_response(request)
-        except RateLimitError as exc:
-            return _rate_limit_response(exc)
-
     def process_exception(
         self,
         request: HttpRequest,
@@ -316,13 +285,6 @@ class ExceptionLoggingMiddleware:
         """Sync path."""
         try:
             return self.get_response(request)
-        except ResilienceKitError as exc:
-            return _kit_error_response(exc)
-
-    async def __acall__(self, request: HttpRequest) -> HttpResponse:
-        """Async path."""
-        try:
-            return await self.get_response(request)
         except ResilienceKitError as exc:
             return _kit_error_response(exc)
 

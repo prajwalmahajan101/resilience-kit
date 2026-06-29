@@ -533,7 +533,7 @@ A body field named `notes` containing `"PAN: ABCDE1234F"` is logged in full.
 
 ### #C6 🟠 DRF throttle ASGI compatibility — replace `asyncio.run`
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 3 · **Priority:** 1.33 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 3 · **Priority:** 1.33 · **GH:** _unfiled_ · **Status:** `fixed` (branch `feat/c6-drf-asgi` → `feat/lane-c-v0.2.0`) — added `adapters/django/_bridge.run_on_kit_loop` + public `apps.get_kit_loop()`; `_KitThrottle.allow_request` now routes `throttle.check()` through the persistent daemon loop via `run_coroutine_threadsafe` instead of `asyncio.run`, so it works under both WSGI and ASGI. Amended ADR-0011 (reverses its "don't reuse the daemon loop" stance). 3 unit tests (asyncio.run-raises-in-loop, bridge-in-loop, bridge-in-sync). The breaker `asyncio.Lock` cross-loop concern is **#D2** (Lane D) and out of scope; routing through one persistent loop only incidentally helps the throttle path.
 
 **Where:** `src/resilience_kit/adapters/django/drf_throttles.py:85`
 

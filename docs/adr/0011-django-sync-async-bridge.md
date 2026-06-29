@@ -1,6 +1,15 @@
 # 0011 — Django sync/async bridge
 
-Status: accepted  ·  Date: 2026-06-10  ·  Milestone: M6
+Status: accepted (amended v0.2.0, Lane C #C6)  ·  Date: 2026-06-10  ·  Milestone: M6
+
+> **Amendment (2026-06-29, v0.2.0, Lane C #C6).** The original decision below
+> bridged DRF throttle calls with per-call `asyncio.run` and *deliberately
+> declined* to reuse the daemon loop. That made every kit-throttled DRF route
+> 500 under ASGI (`asyncio.run()` cannot be called from a running event loop).
+> This is reversed: throttle checks now bridge onto the **persistent daemon
+> loop** via `run_coroutine_threadsafe` (`adapters/django/_bridge.run_on_kit_loop`,
+> fed by `apps.get_kit_loop()`). See the "Amendment" section at the end for the
+> revised rationale; the original text is preserved for history.
 
 ## Context
 
@@ -97,9 +106,9 @@ emits the LLD §11 envelope and the canonical `X-RateLimit-*` headers.
   HTTP client, monitor, audit. Adopters install `INSTALLED_APPS +=
   ["resilience_kit.adapters.django"]` and the daemon starts on first
   worker boot.
-- Django + ASGI: middleware + fields work natively; throttles work
-  only from sync code paths. ASGI projects that need request-time
-  throttling should consider the FastAPI adapter.
+- Django + ASGI: middleware + fields work natively; throttles **also**
+  work as of v0.2.0 (#C6) — see the Amendment below. (Originally:
+  throttles worked only from sync code paths.)
 - Audit drain on SIGKILL is best-effort: in-flight events are lost.
   Production deployments should run workers behind a reverse proxy
   that uses SIGTERM for graceful shutdown (Gunicorn / Uvicorn / Hypercorn
@@ -154,3 +163,48 @@ Operational commands:
 ./manage.py resilience_reset partner
 ./manage.py resilience_reset --all
 ```
+
+## Amendment (v0.2.0, Lane C #C6) — bridge throttles onto the daemon loop
+
+**Problem.** The original "Short-lived sync→async calls" decision used
+`asyncio.run(get_throttle().check(...))` inside `_KitThrottle.allow_request`.
+Under ASGI Django the request lifecycle already has a running loop, so
+`asyncio.run` raises `RuntimeError: asyncio.run() cannot be called from a
+running event loop` — **every kit-throttled DRF route 500s on ASGI**. The
+"deliberately does not do" notes argued the daemon-loop reuse wasn't worth the
+latency/coupling; that traded correctness for a sub-millisecond saving.
+
+**Revised decision.** Throttle checks bridge onto the **persistent** daemon
+loop (the one `apps.py` already runs for the recovery monitor) via
+`asyncio.run_coroutine_threadsafe(coro, loop).result(timeout)`, wrapped as
+`adapters/django/_bridge.run_on_kit_loop` and fed by the new public
+`apps.get_kit_loop()`. This:
+
+- works identically from sync (WSGI) and running-loop (ASGI) callers — the
+  call blocks the *calling* thread, never nests `asyncio.run`;
+- shares one process-lived loop, so async primitives bound to it (the throttle's
+  redis client, locks) never rebind across calls — which is precisely the
+  cross-loop failure the original ADR feared from `async_to_sync`'s cached
+  thread-local loop. A single, owned, never-closed loop sidesteps it.
+
+**Why the original objections no longer hold.**
+
+- *"Ties request latency to the daemon's wake cadence."* It does not: the
+  coroutine is scheduled immediately on the loop, independent of the monitor's
+  poll `sleep`. The loop is free to run submitted work between polls.
+- *"Cross-threads per-request state."* Throttle `check()` is stateless per call
+  (state lives in Redis / the in-memory backend singleton), so there is no
+  per-request state to cross-thread.
+- *latency.* One `run_coroutine_threadsafe` hop is microseconds; the throttle's
+  own Redis round-trip dominates regardless.
+
+**Caveat.** `.result()` blocks the calling thread until the check completes.
+Under ASGI, DRF dispatch runs in a thread (sync `APIView.dispatch`), so this
+blocks a worker thread, not the event loop — acceptable and equivalent to the
+prior blocking shape, minus the crash.
+
+**Not changed.** Management commands still run sync and could keep `asyncio.run`,
+but route through the same bridge for one code path. The breaker's sync-wrapper
+cross-loop rebind (#D2) is a *separate* issue; bridging throttles onto the
+persistent loop only incidentally avoids the same class of bug for the throttle
+path.

@@ -28,6 +28,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ### Fixed
 
+- Django DRF throttles now work under ASGI (Daphne / Uvicorn). `_KitThrottle.allow_request` bridged the async throttle check with `asyncio.run`, which raises `RuntimeError: asyncio.run() cannot be called from a running event loop` under ASGI — every kit-throttled DRF route 500'd. Checks now route onto the adapter's persistent daemon loop via `run_coroutine_threadsafe` (`adapters/django/_bridge.run_on_kit_loop`, fed by the new `apps.get_kit_loop()`), which works from both WSGI (sync) and ASGI (running-loop) callers. ADR-0011 amended. (Lane C #C6)
 - `PostgresAuditBackend._ensure_pool` now guards pool creation with an `asyncio.Lock` instead of a `threading.Lock`. A `threading.Lock` is released the instant `await` suspends, so concurrent first writes (from `FireAndForgetDispatcher`) could both create a pool and leak the orphan. (Lane B #B7)
 - `cache.provider.get_cache()` no longer crashes. The `memory` entry point resolves to `InMemoryAsyncCache` directly (shadowing the `_build_memory` adapter), which was then called with an `alias` kwarg it did not accept. `InMemoryAsyncCache.__init__` now accepts and ignores `alias`, matching the adapter's contract. Surfaced by the new dead-symbol gate (#A14); the function had no caller. Added a provider unit test.
 

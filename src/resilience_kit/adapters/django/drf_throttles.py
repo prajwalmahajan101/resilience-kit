@@ -24,9 +24,9 @@ keyed by scope name (``ip``, ``user_tier``, ``endpoint``, ``burst``,
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
+from resilience_kit.adapters.django._bridge import run_on_kit_loop
 from resilience_kit.exceptions import MissingExtraError, RateLimitError
 from resilience_kit.throttle.base import Rate
 from resilience_kit.throttle.provider import get_throttle
@@ -79,10 +79,15 @@ class _KitThrottle(BaseThrottle):  # type: ignore[misc]  # rest_framework untype
         kit's exception handler so the LLD §11 envelope + the canonical
         ``X-RateLimit-*`` headers reach the client. DRF's own
         :class:`Throttled` exception is bypassed.
+
+        The throttle check is bridged onto the adapter's persistent
+        daemon loop (#C6) rather than ``asyncio.run``, so the call works
+        under both WSGI and ASGI deployments — ``asyncio.run`` raises
+        from inside a running loop.
         """
         attrs = self._attrs(request, view)
         key = build_key(self.scope, attrs)
-        decision = asyncio.run(get_throttle().check(key, self._parsed_rate))
+        decision = run_on_kit_loop(get_throttle().check(key, self._parsed_rate))
         if not decision.allowed:
             raise RateLimitError(
                 limit=decision.limit,

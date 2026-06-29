@@ -104,6 +104,32 @@ def _ensure_monitor_thread() -> None:
         _logger.info("Resilience monitor thread started.")
 
 
+def get_kit_loop() -> asyncio.AbstractEventLoop:
+    """Return the adapter's persistent daemon-thread loop, starting it if needed.
+
+    The loop is owned by the recovery-monitor thread and lives for the
+    whole process. Coroutines bridged onto it (e.g. DRF throttle checks,
+    #C6) therefore share **one** long-lived loop, so async primitives
+    (locks, events, the redis client) bound to it never rebind across
+    calls — the cross-loop failure mode that per-call ``asyncio.run``
+    suffers under (see ADR-0011). Idempotent: safe to call before
+    ``AppConfig.ready()`` has run.
+
+    Returns:
+        The running event loop owned by the monitor thread.
+
+    Raises:
+        RuntimeError: The monitor thread failed to bring a loop up.
+    """
+    _ensure_monitor_thread()
+    if _loop is None:  # pragma: no cover - only if the thread failed to start
+        raise RuntimeError(
+            "resilience-kit recovery-monitor loop is not available; "
+            "the daemon thread failed to start.",
+        )
+    return _loop
+
+
 def _run_loop(ready: threading.Event) -> None:
     """Body of the daemon thread — owns a private asyncio loop."""
     global _loop  # noqa: PLW0603
@@ -152,4 +178,4 @@ def _shutdown_monitor_thread() -> None:
     _shutdown_event = None
 
 
-__all__ = ["ResilienceConfig"]
+__all__ = ["ResilienceConfig", "get_kit_loop"]

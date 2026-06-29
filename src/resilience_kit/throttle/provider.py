@@ -42,7 +42,11 @@ def _build_redis(*, clock: Clock | None = None) -> AsyncThrottle:
     from resilience_kit.throttle.redis_impl import RedisAsyncThrottle  # noqa: PLC0415
 
     client = Redis.from_url(settings.redis_url)
-    throttle = RedisAsyncThrottle(redis_client=client, clock=clock)
+    throttle = RedisAsyncThrottle(
+        redis_client=client,
+        clock=clock,
+        fail_mode=settings.defaults.throttle.fail_mode,
+    )
     register_for_recovery(throttle)
     return throttle
 

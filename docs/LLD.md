@@ -370,7 +370,7 @@ Script properties:
 - `now` is read **server-side** via `redis.call('TIME')`, never passed by the client. Two pods with NTP drift would otherwise compute different window cutoffs against the same sorted set, silently breaking the sliding-window invariant. Each script declares `redis.replicate_commands()` so the writes after the non-deterministic `TIME` read replicate on Redis < 7 (no-op on Redis 7+ / Valkey 8). (#B5)
 - TTL refresh = `2 * per_seconds` on every write — keys self-expire when traffic dies.
 - `NoScriptError` triggers exactly one re-load + retry per process per script version.
-- On any `ConnectionError`, the throttle **fails open** and emits `metrics.incr("throttle.fail_open")`; the recovery monitor takes over.
+- On any `RedisError`, the throttle degrades per `fail_mode` (default `"open"`): `"open"` falls back to a **per-pod** in-memory window and emits `metrics.incr("throttle.degraded")`; `"closed"` denies the request and emits `metrics.incr("throttle.fail_closed")`. The recovery monitor restores the primary path either way. Note the per-pod multiplier under `"open"` — an N-pod fleet enforces N× a global limit during an outage; pick `"closed"` for hard upstream limits. (#B8, ADR-0013)
 
 ---
 

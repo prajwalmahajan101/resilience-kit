@@ -251,6 +251,7 @@ Single `ResilienceSettings` model (pydantic v2). Resolved through `get_settings(
 | `defaults.circuit_breaker.reset_timeout` | `30` | seconds |
 | `defaults.circuit_breaker.success_threshold` | `2` | half-open → closed |
 | `defaults.throttle.auth_rate` | `5/min` | applied to `/auth/*` |
+| `defaults.throttle.fail_mode` | `open` | Redis-outage behaviour — `open` (per-pod in-memory fallback) or `closed` (deny while degraded). See note below. |
 | `ssrf.block_private_ips` | `True` | |
 | `ssrf.outbound_allowlist` | `["*"]` | exact host or `.suffix` |
 | `crypto.field_encryption_key` | `None` | required outside dev/test |
@@ -258,6 +259,8 @@ Single `ResilienceSettings` model (pydantic v2). Resolved through `get_settings(
 | `audit.redact_fields` | `["password", "token", "secret", "authorization"]` | |
 
 Full pydantic schema in [LLD.md §10](./docs/LLD.md). Settings keys are loaded with the `RESILIENCE_` prefix and `__` nested delimiter (e.g. `RESILIENCE_DEFAULTS__RETRY__MAX_ATTEMPTS=5`).
+
+> **Throttle fail-mode (Redis outage).** When Redis is unreachable, a `fail_mode="open"` throttle (the default) degrades to a **per-pod** in-memory window — so a global `100/min` limit across 8 pods becomes effectively `800/min` during the outage. For hard upstream limits (e.g. payment APIs), set `fail_mode="closed"` to deny requests while degraded instead. See [ADR-0013](./docs/adr/0013-throttle-fail-mode.md).
 
 ---
 

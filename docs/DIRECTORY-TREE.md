@@ -46,7 +46,12 @@ resilience-kit/
 │       ├── 0004-entry-points-for-third-party-backends.md
 │       ├── 0005-fire-and-forget-audit.md
 │       ├── 0006-outer-breaker-inner-retry.md
-│       └── 0007-dns-pin-via-contextvar.md
+│       ├── 0007-dns-pin-via-contextvar.md
+│       ├── 0008-fernet-env-guard.md
+│       ├── 0009-entry-point-precedence-chain.md
+│       ├── 0010-fastapi-adapter-shape.md
+│       ├── 0011-django-sync-async-bridge.md
+│       └── 0013-throttle-fail-mode.md      # [v0.1.1] Lane B #B8
 │
 ├── src/
 │   └── resilience_kit/

@@ -28,7 +28,7 @@ except ImportError as exc:  # pragma: no cover
 from resilience_kit.circuit_breaker.base import HealthSnapshot
 from resilience_kit.metrics import get_metrics
 from resilience_kit.testing.fakes import Clock, SystemClock
-from resilience_kit.throttle.base import Rate, ThrottleDecision
+from resilience_kit.throttle.base import Rate, ThrottleDecision, ThrottleFailMode
 from resilience_kit.throttle.lua_scripts import SLIDING_WINDOW_LUA
 from resilience_kit.throttle.memory_impl import InMemoryAsyncThrottle
 
@@ -45,6 +45,7 @@ class RedisAsyncThrottle:
         clock: Clock | None = None,
         key_prefix: str = "throttle",
         recovery_probe_interval_seconds: float = 30.0,
+        fail_mode: ThrottleFailMode = "open",
     ) -> None:
         """Initialise a Redis-backed throttle.
 
@@ -54,6 +55,10 @@ class RedisAsyncThrottle:
             key_prefix: Prefix prepended to caller-supplied keys.
             recovery_probe_interval_seconds: Minimum seconds between
                 in-call PINGs while degraded. Quiet workers stay quiet.
+            fail_mode: Behaviour when Redis is unreachable. ``"open"``
+                (default) degrades to the per-pod in-memory fallback;
+                ``"closed"`` denies every request while degraded. See
+                ADR-0013 for the per-pod-multiplier trade-off.
         """
         self._redis = redis_client
         self._clock = clock or SystemClock()
@@ -65,6 +70,7 @@ class RedisAsyncThrottle:
         self._degraded_since: float | None = None
         self._last_probe_at = 0.0
         self._probe_interval = recovery_probe_interval_seconds
+        self._fail_mode: ThrottleFailMode = fail_mode
         self._fallback = InMemoryAsyncThrottle(clock=self._clock)
         self._log_degraded_once = False
 
@@ -79,13 +85,13 @@ class RedisAsyncThrottle:
             Decision describing the outcome.
         """
         if not self._healthy and not await self._maybe_probe():
-            return await self._fallback.check(key, rate)
+            return await self._degraded_decision(key, rate)
 
         try:
             res = await self._eval(key, rate)
         except _redis_exceptions.RedisError as exc:
             self._mark_degraded(exc)
-            return await self._fallback.check(key, rate)
+            return await self._degraded_decision(key, rate)
 
         allowed, count, ttl = res
         remaining = max(0, rate.count - count)
@@ -98,6 +104,33 @@ class RedisAsyncThrottle:
             reset_after=float(ttl),
             reset_at=reset_at,
         )
+
+    async def _degraded_decision(self, key: str, rate: Rate) -> ThrottleDecision:
+        """Decide how to answer while Redis is unreachable, per ``fail_mode``.
+
+        ``"open"`` delegates to the per-pod in-memory fallback (default,
+        ergonomic). ``"closed"`` denies the request outright — correct for
+        hard upstream limits, since a per-pod fallback multiplies a global
+        limit by the pod count during an outage (ADR-0013).
+
+        Args:
+            key: Caller-derived key.
+            rate: Limit to apply.
+
+        Returns:
+            A throttle decision honouring the configured fail mode.
+        """
+        if self._fail_mode == "closed":
+            get_metrics().incr("throttle.fail_closed")
+            now_int = int(self._clock.now())
+            return ThrottleDecision(
+                allowed=False,
+                remaining=0,
+                limit=rate.count,
+                reset_after=rate.per_seconds,
+                reset_at=now_int + int(rate.per_seconds),
+            )
+        return await self._fallback.check(key, rate)
 
     async def reset(self, key: str) -> None:
         """Forget any state stored for ``key``.

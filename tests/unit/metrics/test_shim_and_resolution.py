@@ -99,3 +99,12 @@ def test_otel_resolves_via_entry_point() -> None:
 
     set_settings_source(_FixedSource(ResilienceSettings(metrics_sink="otel")))
     assert isinstance(get_metrics(), OtelMetricsSink)
+
+
+def test_sentry_resolves_via_entry_point() -> None:
+    """metrics_sink='sentry' resolves the Sentry sink through its entry point."""
+    pytest.importorskip("sentry_sdk")
+    from resilience_kit.observability.sentry import SentryMetricsSink  # noqa: PLC0415
+
+    set_settings_source(_FixedSource(ResilienceSettings(metrics_sink="sentry")))
+    assert isinstance(get_metrics(), SentryMetricsSink)

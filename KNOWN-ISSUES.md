@@ -485,7 +485,7 @@ Recommended: option 3. Default stays fail-open for ergonomics; fintech users can
 
 ### #C4 🟡 Add `[sentry]` extra or document Sentry integration recipe
 
-**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 2 · **Priority:** 1.50 · **GH:** _unfiled_
+**Severity:** MEDIUM · **Impact:** 3 · **Effort:** 2 · **Priority:** 1.50 · **GH:** _unfiled_ · **Status:** `fixed` (branch `feat/c4-sentry` → `feat/lane-c-v0.2.0`) — shipped code, not docs-only: `[sentry]` extra + `SentryMetricsSink` (`observability/sentry.py` + `sentry` entry point) that breadcrumbs the headline failure metrics (breaker.open/degraded, retry.exhausted, throttle.fail_closed/degraded, cache.degraded, audit.write_failed/dropped) with `request_id`/`correlation_id` in the breadcrumb data; wrappable by the #C2 cardinality guard. `docs/sentry-integration.md` covers the sink + the request_id-as-tag middleware recipe. 5 tests (capturing transport). No new ADR (additive).
 
 **Where:** New `docs/sentry-integration.md`; possibly `src/resilience_kit/observability/sentry.py`
 

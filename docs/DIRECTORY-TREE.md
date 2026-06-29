@@ -53,7 +53,8 @@ resilience-kit/
 │       ├── 0011-django-sync-async-bridge.md
 │       ├── 0012-idempotency-key-on-retried-writes.md  # [v0.1.1] Lane B #B2
 │       ├── 0013-throttle-fail-mode.md      # [v0.1.1] Lane B #B8
-│       └── 0014-fernet-multikey-rotation.md  # [v0.2.0] Lane C #C1
+│       ├── 0014-fernet-multikey-rotation.md  # [v0.2.0] Lane C #C1
+│       └── 0015-metrics-cardinality-contract.md  # [v0.2.0] Lane C #C2
 │
 ├── src/
 │   └── resilience_kit/

@@ -184,6 +184,9 @@ class AsyncAPIClient:
             idempotency_key=idempotency_key,
             auto_idempotency_key=auto_idempotency_key,
         )
+        # Best-effort W3C traceparent propagation (#C3). No-op unless the
+        # [otel] extra is installed and a span is active.
+        headers = self._maybe_inject_trace_context(headers)
 
         host = (urlparse(url).hostname or "").lower()
         call_kwargs = {
@@ -248,6 +251,30 @@ class AsyncAPIClient:
             del resolved[existing]
         resolved[_IDEMPOTENCY_HEADER] = idempotency_key or uuid.uuid4().hex
         return resolved
+
+    @staticmethod
+    def _maybe_inject_trace_context(
+        headers: Mapping[str, str] | None,
+    ) -> Mapping[str, str] | None:
+        """Inject W3C ``traceparent`` into ``headers`` when tracing is available.
+
+        Best-effort and decoupled: if the ``[otel]`` extra is not installed the
+        import raises :class:`MissingExtraError` and we return ``headers``
+        unchanged. When OTel is present but no span is active, injection is a
+        no-op. Keeps the HTTP client free of a hard OpenTelemetry dependency.
+
+        Args:
+            headers: Caller-supplied headers (post idempotency resolution).
+
+        Returns:
+            Headers with ``traceparent`` added when a span is active, else
+            the originals unchanged.
+        """
+        try:
+            from resilience_kit.tracing import inject_trace_context  # noqa: PLC0415
+        except MissingExtraError:
+            return headers
+        return inject_trace_context(headers)
 
     async def _raw_send(
         self,

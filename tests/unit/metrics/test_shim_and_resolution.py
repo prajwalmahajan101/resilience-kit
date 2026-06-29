@@ -90,3 +90,12 @@ def test_prometheus_resolves_via_entry_point() -> None:
 
     set_settings_source(_FixedSource(ResilienceSettings(metrics_sink="prometheus")))
     assert isinstance(get_metrics(), PrometheusMetricsSink)
+
+
+def test_otel_resolves_via_entry_point() -> None:
+    """metrics_sink='otel' resolves the OTel sink through its entry point."""
+    pytest.importorskip("opentelemetry")
+    from resilience_kit.metrics.otel import OtelMetricsSink  # noqa: PLC0415
+
+    set_settings_source(_FixedSource(ResilienceSettings(metrics_sink="otel")))
+    assert isinstance(get_metrics(), OtelMetricsSink)

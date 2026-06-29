@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # full history so tag → version match works on rebased tags
 
@@ -114,7 +114,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout the tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download distributions
         uses: actions/download-artifact@v4

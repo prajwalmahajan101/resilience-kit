@@ -77,7 +77,13 @@ class TracingMiddleware:
         self._tracer = trace.get_tracer(tracer_name)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        """Open a span around the HTTP exchange; pass other scopes through."""
+        """Open a span around the HTTP exchange; pass other scopes through.
+
+        Args:
+            scope: ASGI scope dict.
+            receive: ASGI receive callable.
+            send: ASGI send callable.
+        """
         if scope["type"] != "http":
             await self._app(scope, receive, send)
             return
@@ -119,7 +125,17 @@ class TracingMiddleware:
 
 
 def _headers_dict(scope: Scope) -> dict[str, str]:
-    """Return a case-folded ``str → str`` view of the request headers."""
+    """Return a case-folded ``str → str`` view of the request headers.
+
+    ASGI delivers headers as ``(bytes, bytes)`` pairs; both sides are
+    decoded to ``str`` here so the dict key is unambiguously hashable.
+
+    Args:
+        scope: ASGI scope dict.
+
+    Returns:
+        Lower-cased header name → value mapping.
+    """
     out: dict[str, str] = {}
     for raw_name, raw_value in scope.get("headers", []):
         out[bytes(raw_name).decode("latin-1").lower()] = bytes(raw_value).decode("latin-1")

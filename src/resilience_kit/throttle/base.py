@@ -7,12 +7,22 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
 from resilience_kit.exceptions import ValidationError
 
 if TYPE_CHECKING:
     from resilience_kit.circuit_breaker.base import HealthSnapshot
+
+
+#: Behaviour of a distributed throttle when its Redis backend is unreachable.
+#:
+#: ``"open"`` (default) degrades to a per-pod in-memory window — ergonomic, but
+#: a global ``N/min`` limit effectively becomes ``N/min`` *per pod* during the
+#: outage (an 8-pod fleet allows 8x the intended rate). ``"closed"`` denies
+#: every request while degraded — correct for hard upstream limits (payment
+#: APIs) at the cost of dropping traffic during a Redis outage. See ADR-0013.
+ThrottleFailMode = Literal["open", "closed"]
 
 
 _RATE_RE = re.compile(r"^\s*(\d+)\s*/\s*([a-z]+)\s*$", re.IGNORECASE)
@@ -140,4 +150,4 @@ class AsyncThrottle(Protocol):
         ...
 
 
-__all__ = ["AsyncThrottle", "Rate", "ThrottleDecision", "parse_rate"]
+__all__ = ["AsyncThrottle", "Rate", "ThrottleDecision", "ThrottleFailMode", "parse_rate"]

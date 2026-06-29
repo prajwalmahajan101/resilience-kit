@@ -35,6 +35,10 @@ class ThrottleDefaults(BaseModel):
     """Default throttle policy applied when a route has no scope override."""
 
     auth_rate: str = "5/min"
+    #: Behaviour when the Redis throttle backend is unreachable. ``"open"``
+    #: (default) degrades to a per-pod in-memory window; ``"closed"`` denies
+    #: requests while degraded (hard-limit safety). See ADR-0013.
+    fail_mode: Literal["open", "closed"] = "open"
 
 
 class Defaults(BaseModel):

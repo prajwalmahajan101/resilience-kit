@@ -397,7 +397,7 @@ async def _ensure_pool(self) -> asyncpg.Pool:
 
 ### #B8 🟠 Throttle fail-mode under Redis outage — document or fail-closed
 
-**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 4 · **Effort:** 2 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` via option 3 (branch `fix/lane-b-correctness-security`) — added `ThrottleFailMode` + `RedisAsyncThrottle(fail_mode=…)` (default `"open"`) threaded from `defaults.throttle.fail_mode`; `"closed"` denies while degraded and emits `throttle.fail_closed`. Documented the per-pod multiplier loudly in README + LLD §6; new ADR-0013. Unit tests cover both modes against a dead-Redis stub.
 
 **Where:** `src/resilience_kit/throttle/redis_impl.py:81-88`; README; ADR (new)
 

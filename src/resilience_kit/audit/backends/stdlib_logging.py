@@ -16,6 +16,8 @@ import logging
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
+from resilience_kit.circuit_breaker.base import HealthSnapshot
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -36,6 +38,10 @@ class StdlibLoggingAuditBackend:
         """
         self._logger = logging.getLogger(logger_name)
 
+    async def write(self, event: AuditEvent) -> None:
+        """Emit a single event (delegates to :meth:`write_many`)."""
+        await self.write_many([event])
+
     async def write_many(self, events: Sequence[AuditEvent]) -> None:
         """Emit one INFO record per event with the event fields in ``extra``."""
         for event in events:
@@ -51,9 +57,9 @@ class StdlibLoggingAuditBackend:
                 extra={"audit_event": asdict(event)},
             )
 
-    async def health_check(self) -> bool:
+    async def health_check(self) -> HealthSnapshot:
         """Always healthy — logging cannot fail this aggregator."""
-        return True
+        return HealthSnapshot(healthy=True, backend="stdlib_logging")
 
 
 __all__ = ["StdlibLoggingAuditBackend"]

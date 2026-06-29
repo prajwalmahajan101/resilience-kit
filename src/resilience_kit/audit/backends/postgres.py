@@ -19,6 +19,7 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
+from resilience_kit.circuit_breaker.base import HealthSnapshot
 from resilience_kit.exceptions import MissingExtraError
 
 if TYPE_CHECKING:
@@ -133,6 +134,10 @@ class PostgresAuditBackend:
         assert self._pool is not None
         return self._pool
 
+    async def write(self, event: AuditEvent) -> None:
+        """Persist a single event (delegates to :meth:`write_many`)."""
+        await self.write_many([event])
+
     async def write_many(self, events: Sequence[AuditEvent]) -> None:
         """Persist a batch as a single transaction."""
         if not events:
@@ -142,15 +147,19 @@ class PostgresAuditBackend:
         async with pool.acquire() as conn, conn.transaction():
             await conn.executemany(self._insert_sql, rows)
 
-    async def health_check(self) -> bool:
-        """Return ``True`` when ``SELECT 1`` succeeds against the pool."""
+    async def health_check(self) -> HealthSnapshot:
+        """Return a snapshot reflecting whether ``SELECT 1`` succeeds."""
         try:
             pool = await self._ensure_pool()
             async with pool.acquire() as conn:
                 value = await conn.fetchval("SELECT 1")
-            return bool(value == 1)
-        except Exception:
-            return False
+        except Exception as exc:
+            return HealthSnapshot(
+                healthy=False,
+                backend="postgres",
+                detail=f"{type(exc).__name__}: {exc}",
+            )
+        return HealthSnapshot(healthy=bool(value == 1), backend="postgres")
 
     async def aclose(self) -> None:
         """Close the connection pool."""

@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from resilience_kit.circuit_breaker.base import HealthSnapshot
+
 
 Direction = Literal["inbound", "outbound"]
 Outcome = Literal["success", "failure"]
@@ -55,6 +57,24 @@ class AuditBackend(Protocol):
     here are retried by the dispatcher per LLD §7.
     """
 
+    async def write(self, event: AuditEvent) -> None:
+        """Persist a single audit event.
+
+        The dispatcher batches by default, but a single-event write keeps
+        the protocol symmetric with the locked LLD §2 contract and lets
+        callers persist one event without constructing a batch. The
+        canonical implementation delegates to :meth:`write_many`::
+
+            await self.write_many([event])
+
+        Args:
+            event: The event to persist.
+
+        Raises:
+            Exception: Any persistence failure (see :meth:`write_many`).
+        """
+        ...
+
     async def write_many(self, events: Sequence[AuditEvent]) -> None:
         """Persist a batch of audit events.
 
@@ -68,12 +88,15 @@ class AuditBackend(Protocol):
         """
         ...
 
-    async def health_check(self) -> bool:
-        """Return ``True`` when the backend is currently usable.
+    async def health_check(self) -> HealthSnapshot:
+        """Probe the backend and return a :class:`HealthSnapshot`.
 
-        Used by the ``/readyz`` aggregator (M4 commit 2). Backends that
-        are always available (``noop`` / ``stdlib_logging``) return
-        ``True`` unconditionally.
+        Consumed by the ``/readyz`` aggregator (:mod:`resilience_kit.health`),
+        which reduces every registered backend's snapshot — so audit
+        backends must return the same shape as cache / breaker / throttle
+        backends, not a bare ``bool``. Backends that are always available
+        (``noop`` / ``stdlib_logging``) return ``healthy=True``
+        unconditionally.
         """
         ...
 

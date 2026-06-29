@@ -26,6 +26,7 @@ All notable changes to `resilience-kit` are documented here. Format: [Keep a Cha
 
 ### Security
 
+- `pinned_httpx_client()` now forces `follow_redirects=False` and raises `ValueError` if a caller passes `follow_redirects=True`. Auto-followed 3xx redirects resolved the new host through normal DNS — never re-validated against SSRF, never re-pinned — so an open redirect to `http://169.254.169.254/` (cloud metadata) or an internal IP bypassed the DNS pin entirely (CWE-918 + CWE-601). Callers needing redirects must follow them manually and call `resolve_and_validate()` per hop. (Lane B #B1)
 - Bumped vulnerable locked dependencies flagged by the new `pip-audit` (OSV) gate: `cryptography` 48.0.0 → 49.0.0 (GHSA-537c-gmf6-5ccf), `pydantic-settings` 2.14.1 → 2.14.2 (GHSA-4xgf-cpjx-pc3j), `starlette` 1.2.1 → 1.3.1 (PYSEC-2026-248/249). Lockfile only; no API change.
 
 ### Removed

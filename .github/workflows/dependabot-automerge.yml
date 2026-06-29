@@ -1,0 +1,34 @@
+name: Dependabot auto-merge
+
+# Auto-merges Dependabot PRs for patch + minor updates once all required
+# checks pass. Major updates are left for manual review. The library
+# already trusts Dependabot to *open* PRs (.github/dependabot.yml); this
+# closes the loop by letting low-risk bumps merge without a human in the
+# loop. Requires "Allow auto-merge" enabled in repo settings and the CI
+# jobs marked as required status checks on the protected branch.
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    name: Enable auto-merge (patch/minor)
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+
+      - name: Enable auto-merge for patch and minor updates
+        if: >-
+          ${{ steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+              steps.meta.outputs.update-type == 'version-update:semver-minor' }}
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

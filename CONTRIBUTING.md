@@ -4,6 +4,9 @@ This is a small portfolio library — issues and PRs are welcome but I am the
 only maintainer. The contract test suite under `tests/contract/` is the
 source of truth: any new backend must pass it, parametrized in.
 
+By participating you agree to abide by the
+[Code of Conduct](./CODE_OF_CONDUCT.md) (Contributor Covenant v2.1).
+
 ## Quick start
 
 ```bash

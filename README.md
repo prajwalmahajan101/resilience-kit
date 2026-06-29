@@ -343,6 +343,8 @@ Report vulnerabilities privately via [GitHub Security Advisories](https://github
 
 Dev setup, the full local CI gate, contract-suite expectations, and the step-by-step for shipping a third-party backend live in [CONTRIBUTING.md](./CONTRIBUTING.md). The contract test suite under `tests/contract/` is the source of truth: any new backend must pass it, parametrized in.
 
+By participating you agree to abide by the [Code of Conduct](./CODE_OF_CONDUCT.md) (Contributor Covenant v2.1).
+
 ---
 
 ## License

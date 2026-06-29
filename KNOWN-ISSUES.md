@@ -96,7 +96,7 @@ Result: `__acall__` is unreachable code. Six occurrences across the file.
 
 ### #A4 🟢 Bump `Development Status :: 3 - Alpha` → `4 - Beta`
 
-**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-a-quickwins`) — classifier bumped + CHANGELOG `### Changed`
 
 **Where:** `pyproject.toml` `[project]` classifiers
 
@@ -110,7 +110,7 @@ Result: `__acall__` is unreachable code. Six occurrences across the file.
 
 ### #A5 🟢 Configure dependabot `automerge` on patch/minor when CI green
 
-**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-a-quickwins`) — added `.github/workflows/dependabot-automerge.yml` (patch/minor via `fetch-metadata@v2` + `gh pr merge --auto`; majors manual)
 
 **Where:** `.github/dependabot.yml`; possibly a new workflow `.github/workflows/dependabot-automerge.yml`
 
@@ -124,7 +124,7 @@ Result: `__acall__` is unreachable code. Six occurrences across the file.
 
 ### #A6 🟢 Add `CODE_OF_CONDUCT.md` (Contributor Covenant)
 
-**Severity:** LOW · **Impact:** 1 · **Effort:** 1 · **Priority:** 1.00 · **GH:** _unfiled_
+**Severity:** LOW · **Impact:** 1 · **Effort:** 1 · **Priority:** 1.00 · **GH:** _unfiled_ · **Status:** `fixed` (branch `fix/lane-a-quickwins`) — Contributor Covenant v2.1 added; linked from README + CONTRIBUTING; enforcement contact via GitHub Security Advisories / maintainer
 
 **Where:** Repo root
 
@@ -194,7 +194,7 @@ redis.call('ZADD', key, now, tostring(now) .. ':' .. tostring(math.random(100000
 
 ### #A10 🟢 Add GitHub issue + PR templates
 
-**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_
+**Severity:** LOW · **Impact:** 2 · **Effort:** 1 · **Priority:** 2.00 · **GH:** _unfiled_ · **Status:** `fixed (already present)` — verified `bug_report.md` (incl. version/Python/OS/extras/backend fields), `feature_request.md` (incl. scope checklist), and `PULL_REQUEST_TEMPLATE.md` already exist and are adequate; no change needed
 
 **Where:** `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md`
 

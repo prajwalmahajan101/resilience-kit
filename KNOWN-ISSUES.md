@@ -424,7 +424,7 @@ Recommended: option 3. Default stays fail-open for ergonomics; fintech users can
 
 ### #C1 🟠 Add `MultiFernet` + key-versioning + rotation guide
 
-**Severity:** HIGH · **Impact:** 5 · **Effort:** 3 · **Priority:** 1.67 · **GH:** _unfiled_
+**Severity:** HIGH · **Impact:** 5 · **Effort:** 3 · **Priority:** 1.67 · **GH:** _unfiled_ · **Status:** `fixed` (branch `feat/c1-multifernet` → `feat/lane-c-v0.2.0`) — `field_encryption_keys: list[SecretStr]` (primary first) backs a `MultiFernet`; singular `field_encryption_key` kept as a deprecated alias (`ordered_keys()` resolves precedence). `FernetCipher.rotate()` re-encrypts under the primary. **No per-token version prefix** — redundant given Fernet's version byte + `MultiFernet`'s key-trial decrypt (see ADR-0014). New `docs/key-rotation.md`. 8 new tests. **NB:** issue text below says "New ADR-0012" — that number was taken by #B2; this shipped as **ADR-0014**.
 
 **Where:** `src/resilience_kit/crypto/fernet.py`; new `docs/key-rotation.md`
 
@@ -436,7 +436,7 @@ Recommended: option 3. Default stays fail-open for ergonomics; fintech users can
 1. Wrap `MultiFernet` in `FernetCipher` with key-version prefix on each token.
 2. Accept `field_encryption_keys: list[SecretStr]` settings field (ordered: primary first, then older keys for decrypt-only).
 3. Add `FernetCipher.rotate(plaintext_or_old_ciphertext)` helper for re-encrypting under the new primary.
-4. New ADR-0012 documenting the rotation policy.
+4. New ADR documenting the rotation policy. (Shipped as **ADR-0014** — ADR-0012 was already claimed by #B2.)
 5. `docs/key-rotation.md` with operator runbook.
 
 **Acceptance.** Test: encrypt with K1, add K2 as primary, decrypt the K1 ciphertext (still works), encrypt new data (uses K2), rotate the K1 ciphertext to K2 via `rotate()`.
@@ -832,4 +832,4 @@ This catalog is the consolidated view of:
 - `audit/RATINGS-and-impact-effort.md` — impact-vs-effort scoring (canonical)
 - `audit/PRAISE-vs-GRILL-and-engineer-read.md` — paired praise/critique
 
-Last updated: 2026-06-24.
+Last updated: 2026-06-29.

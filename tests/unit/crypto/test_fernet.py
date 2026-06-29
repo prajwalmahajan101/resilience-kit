@@ -12,7 +12,7 @@ import pytest
 
 pytest.importorskip("cryptography")
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from pydantic import SecretStr
 
 from resilience_kit.crypto import (
@@ -176,3 +176,87 @@ def test_cache_is_reused_until_reset() -> None:
     # After reset + re-install with the same key, decrypt still works.
     reset_fernet_cache()
     assert FernetCipher.decrypt(token_a) == "x"
+
+
+# --- #C1: MultiFernet key rotation ------------------------------------------
+
+
+def test_old_key_ciphertext_decrypts_after_prepending_new_primary() -> None:
+    """Add a new primary; ciphertext written under the old key still decrypts."""
+    k1 = Fernet.generate_key().decode("ascii")
+    k2 = Fernet.generate_key().decode("ascii")
+
+    _install(field_encryption_keys=[SecretStr(k1)], environment="prod")
+    token = FernetCipher.encrypt("payload")
+
+    # Rotate: k2 is now primary, k1 retained for decrypt.
+    _install(field_encryption_keys=[SecretStr(k2), SecretStr(k1)], environment="prod")
+    assert FernetCipher.decrypt(token) == "payload"
+
+
+def test_new_data_encrypts_under_primary_key() -> None:
+    """With [k2, k1], a fresh token is decryptable by a bare Fernet(k2)."""
+    k1 = Fernet.generate_key()
+    k2 = Fernet.generate_key()
+    _install(
+        field_encryption_keys=[
+            SecretStr(k2.decode("ascii")),
+            SecretStr(k1.decode("ascii")),
+        ],
+        environment="prod",
+    )
+    token = FernetCipher.encrypt("fresh")
+    assert Fernet(k2).decrypt(token.encode("ascii")).decode("utf-8") == "fresh"
+
+
+def test_rotate_upgrades_token_to_new_primary() -> None:
+    """rotate() re-encrypts an old-key token so only the new primary reads it."""
+    k1 = Fernet.generate_key()
+    k2 = Fernet.generate_key()
+
+    _install(field_encryption_keys=[SecretStr(k1.decode("ascii"))], environment="prod")
+    old_token = FernetCipher.encrypt("secret")
+
+    _install(
+        field_encryption_keys=[
+            SecretStr(k2.decode("ascii")),
+            SecretStr(k1.decode("ascii")),
+        ],
+        environment="prod",
+    )
+    new_token = FernetCipher.rotate(old_token)
+    # The rotated token is now readable by the new primary directly.
+    assert Fernet(k2).decrypt(new_token.encode("ascii")).decode("utf-8") == "secret"
+    # And the old key alone can no longer read it.
+    with pytest.raises(InvalidToken):
+        Fernet(k1).decrypt(new_token.encode("ascii"))
+
+
+def test_rotate_empty_string_passes_through() -> None:
+    """rotate('') is a no-op, mirroring encrypt/decrypt."""
+    _install(environment="dev")
+    assert FernetCipher.rotate("") == ""
+
+
+def test_singular_key_still_works_and_warns() -> None:
+    """The deprecated singular field is honoured as the sole key, with a warning."""
+    key = Fernet.generate_key()
+    _install(field_encryption_key=SecretStr(key.decode("ascii")), environment="prod")
+    with pytest.warns(DeprecationWarning, match="field_encryption_key is deprecated"):
+        token = FernetCipher.encrypt("legacy-config")
+    assert FernetCipher.decrypt(token) == "legacy-config"
+
+
+def test_list_wins_when_both_set() -> None:
+    """When both list and singular are set, the list wins (singular ignored)."""
+    k_list = Fernet.generate_key()
+    k_singular = Fernet.generate_key()
+    _install(
+        field_encryption_keys=[SecretStr(k_list.decode("ascii"))],
+        field_encryption_key=SecretStr(k_singular.decode("ascii")),
+        environment="prod",
+    )
+    with pytest.warns(DeprecationWarning, match="list wins"):
+        token = FernetCipher.encrypt("data")
+    # Encrypted under the list key, not the singular one.
+    assert Fernet(k_list).decrypt(token.encode("ascii")).decode("utf-8") == "data"

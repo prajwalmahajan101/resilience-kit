@@ -36,6 +36,31 @@ Option 3. `CryptoSettings` carries an `environment: Literal["prod",
   (`_DEV_FALLBACK_KEY`). The constant is **insecure on purpose** so it
   can never accidentally be a viable prod key.
 
+## Update (v0.1.1, Lane B #B6) — key resolution: prefer a real Fernet key
+
+The original derivation always ran the configured value through unsalted
+SHA-256: `Fernet(b64encode(sha256(key_source)))`. That is secure only when
+`field_encryption_key` is itself high-entropy random — which was never a
+documented requirement. For human-chosen or config-file passphrases it is
+brute-forceable (CWE-916).
+
+`_fernet()` now resolves the key in two steps:
+
+1. If `field_encryption_key` is already a valid Fernet key (32 url-safe
+   base64 bytes, e.g. from `Fernet.generate_key()`), it is used **directly**.
+   This is the recommended path and the one the docs now point at.
+2. Otherwise the value is treated as a passphrase and SHA-256-derived as
+   before — but this path is **deprecated** and emits a one-time warning.
+   It is kept solely so data encrypted by earlier versions still decrypts;
+   the derivation is byte-for-byte unchanged, so no migration is forced.
+
+`CryptoSettings.field_encryption_key` also gained a validator that warns when
+the value is a short passphrase (< 32 chars). Salted-KDF / Argon2 hardening
+and key rotation are deliberately **not** done here — they arrive with
+`MultiFernet` in Lane C (#C1). This change is non-breaking: existing
+passphrase users keep working (with a nudge), and new deployments get the
+direct-key path.
+
 ## Consequences
 
 - Prod cannot silently encrypt with a guessable key. The failure is

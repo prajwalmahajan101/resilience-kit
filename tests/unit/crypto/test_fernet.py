@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -11,6 +14,7 @@ import pytest
 
 pytest.importorskip("cryptography")
 
+from cryptography.fernet import Fernet
 from pydantic import SecretStr
 
 from resilience_kit.crypto import (
@@ -77,6 +81,47 @@ def test_empty_string_passes_through() -> None:
     _install(environment="dev")
     assert FernetCipher.encrypt("") == ""
     assert FernetCipher.decrypt("") == ""
+
+
+# --- #B6: raw-key path vs deprecated passphrase derivation ------------------
+
+
+def test_raw_fernet_key_is_used_directly() -> None:
+    """A real Fernet key is used as-is (no SHA-256 layer)."""
+    key = Fernet.generate_key()  # bytes, 44 url-safe-b64 chars
+    _install(field_encryption_key=SecretStr(key.decode("ascii")), environment="prod")
+    token = FernetCipher.encrypt("hello")
+    # Proof it was used directly: a raw Fernet(key) decrypts the kit's token.
+    assert Fernet(key).decrypt(token.encode("ascii")).decode("utf-8") == "hello"
+
+
+def test_passphrase_uses_legacy_sha256_derivation() -> None:
+    """A passphrase still derives the same SHA-256 key — legacy data stays readable."""
+    passphrase = "a-real-secret"
+    _install(field_encryption_key=SecretStr(passphrase), environment="prod")
+    token = FernetCipher.encrypt("hello")
+    # The legacy derivation is unchanged, so old ciphertext still decrypts.
+    derived = base64.urlsafe_b64encode(hashlib.sha256(passphrase.encode()).digest())
+    assert Fernet(derived).decrypt(token.encode("ascii")).decode("utf-8") == "hello"
+
+
+def test_passphrase_emits_deprecation_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The deprecated passphrase path warns once."""
+    _install(field_encryption_key=SecretStr("a-real-secret"), environment="prod")
+    with caplog.at_level(logging.WARNING):
+        FernetCipher.encrypt("x")
+    assert any("deprecated" in r.message.lower() for r in caplog.records)
+
+
+def test_raw_key_does_not_warn(caplog: pytest.LogCaptureFixture) -> None:
+    """The recommended raw-key path is silent (no deprecation noise)."""
+    key = Fernet.generate_key()
+    _install(field_encryption_key=SecretStr(key.decode("ascii")), environment="prod")
+    with caplog.at_level(logging.WARNING):
+        FernetCipher.encrypt("x")
+    assert not any("deprecated" in r.message.lower() for r in caplog.records)
 
 
 # --- Exit-gate: refuses-to-start-in-prod ------------------------------------

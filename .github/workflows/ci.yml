@@ -146,7 +146,7 @@ jobs:
             echo "dead=$(icon "$DEAD")"
           } >> "$GITHUB_OUTPUT"
       - name: Sticky comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: ci-status
           message: |

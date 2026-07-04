@@ -55,7 +55,8 @@ resilience-kit/
 │       ├── 0013-throttle-fail-mode.md      # [v0.1.1] Lane B #B8
 │       ├── 0014-fernet-multikey-rotation.md  # [v0.2.0] Lane C #C1
 │       ├── 0015-metrics-cardinality-contract.md  # [v0.2.0] Lane C #C2
-│       └── 0016-trace-context-propagation.md  # [v0.2.0] Lane C #C3
+│       ├── 0016-trace-context-propagation.md  # [v0.2.0] Lane C #C3
+│       └── 0017-single-shared-redis-client.md  # [v0.2.0] Lane D #D1
 │
 ├── src/
 │   └── resilience_kit/
@@ -64,6 +65,7 @@ resilience-kit/
 │       ├── py.typed                        # [M0] PEP 561 marker
 │       ├── _version.py                     # [M0] single source of truth for __version__
 │       ├── _providers.py                   # [M2] shared resolve_provider() helper (LLD §3)
+│       ├── _redis.py                        # [v0.2.0] shared process-wide Redis client (ADR-0017)
 │       │
 │       ├── runtime.py                      # [M1] get_settings(), require(), SettingsSource
 │       ├── settings.py                     # [M1] ResilienceSettings (pydantic v2) (LLD §10)

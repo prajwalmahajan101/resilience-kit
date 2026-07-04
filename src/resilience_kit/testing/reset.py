@@ -7,6 +7,7 @@ tests that mutate kit state.
 
 from __future__ import annotations
 
+from resilience_kit._redis import aclose_redis_clients, reset_redis_clients
 from resilience_kit.cache.provider import reset_cache
 from resilience_kit.metrics import reset_metrics
 from resilience_kit.recovery import reset_recovery_state
@@ -45,14 +46,19 @@ def reset_all_singletons() -> None:
     reset_dispatcher()
     reset_tasks()
     reset_task_registry()
+    # Drop shared Redis client references (sync — no await available here).
+    # Async harnesses should prefer reset_all_singletons_async to close them.
+    reset_redis_clients()
 
 
 async def reset_all_singletons_async() -> None:
     """Async ergonomic wrapper around :func:`reset_all_singletons`.
 
-    The underlying call is non-blocking, so no thread is spawned and no
-    ``await`` happens internally. Exists purely so async test harnesses
-    (``pytest-asyncio``, ``pytest-trio``) can call it inline instead of
-    wrapping every invocation in ``asyncio.to_thread``.
+    Runs the sync reset, then additionally awaits
+    :func:`resilience_kit._redis.aclose_redis_clients` so shared Redis
+    connections are actually closed (not just dereferenced) — the one piece
+    the sync path cannot do. Async test harnesses (``pytest-asyncio``,
+    ``pytest-trio``) should call this instead of the sync variant.
     """
     reset_all_singletons()
+    await aclose_redis_clients()

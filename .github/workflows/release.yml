@@ -78,11 +78,32 @@ jobs:
             assert http_status_for(ValidationError('x')) == 400; \
             print('top-level imports OK')"
 
+      - name: Generate CycloneDX SBOM (JSON + XML)
+        # Supply-chain artefact for NIST SP 800-218 / EO 14028 procurement.
+        # Scans the /tmp/smoke venv built above (the freshly-installed wheel +
+        # its resolved runtime deps), so the SBOM reflects exactly what a
+        # default `pip install resilience-kit` pulls in. Kept OUT of dist/ so
+        # it never reaches `twine check` or the PyPI publish step (both reject
+        # non-distribution formats); attached to the GitHub Release instead.
+        run: |
+          mkdir -p sbom
+          uvx --from cyclonedx-bom cyclonedx-py environment /tmp/smoke/bin/python \
+            --of JSON -o sbom/sbom-cyclonedx.json
+          uvx --from cyclonedx-bom cyclonedx-py environment /tmp/smoke/bin/python \
+            --of XML -o sbom/sbom-cyclonedx.xml
+
       - name: Upload distributions as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
+
+      - name: Upload SBOM as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
           if-no-files-found: error
 
   publish-pypi:
@@ -103,6 +124,11 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Sigstore-signed provenance (SLSA build-provenance) attached to each
+          # file on PyPI. The job already has `id-token: write` for OIDC, which
+          # is the same scope attestations need. Verify with `sigstore verify`.
+          attestations: true
         # No `with: password:` — Trusted Publishing handles auth via OIDC.
         # See https://docs.pypi.org/trusted-publishers/
 
@@ -121,6 +147,12 @@ jobs:
         with:
           name: dist
           path: dist/
+
+      - name: Download SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
 
       - name: Create GitHub release with attached artifacts
         env:
@@ -150,4 +182,4 @@ jobs:
             --title "$tag" \
             --notes-file "$notes_file" \
             $prerelease_flag \
-            dist/*
+            dist/* sbom/*

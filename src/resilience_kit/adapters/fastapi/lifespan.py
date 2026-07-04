@@ -28,6 +28,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
+from resilience_kit._redis import aclose_redis_clients
 from resilience_kit.audit.factory import get_dispatcher
 from resilience_kit.exceptions import MissingExtraError
 from resilience_kit.health import health_snapshot
@@ -63,6 +64,7 @@ def resilience_lifespan(
     1. Exit the inner lifespan, propagating any exception.
     2. Drain + close the audit dispatcher (``await aclose(drain_timeout=5.0)``).
     3. Stop the recovery monitor (``await monitor.stop()``).
+    4. Close the shared Redis client(s) (``await aclose_redis_clients()``).
 
     Args:
         inner: Optional user-supplied lifespan factory. Use this to
@@ -92,6 +94,9 @@ def resilience_lifespan(
             # produced during the inner shutdown are flushed.
             await get_dispatcher().aclose(drain_timeout=5.0)
             await monitor.stop()
+            # Close shared Redis connections last — nothing else needs them
+            # once the monitor and dispatcher are down.
+            await aclose_redis_clients()
 
     return _lifespan
 

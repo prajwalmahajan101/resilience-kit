@@ -58,11 +58,36 @@ class InMemoryAsyncBreaker:
         self.name = name
         self.config = config or BreakerConfig()
         self._clock = clock or SystemClock()
-        self._lock = asyncio.Lock()
+        # Lazily (re)bound per event loop — see _get_lock. A single instance
+        # can be driven from more than one loop over its lifetime: the sync
+        # ``@circuit_breaker`` wrapper runs a fresh ``asyncio.run`` per call,
+        # so a Lock bound to the first (now-dead) loop would raise
+        # ``RuntimeError: <Lock> is bound to a different event loop`` on the
+        # second call. Mirrors the loop-rebind pattern in ``recovery.py``.
+        self._lock: asyncio.Lock | None = None
+        self._lock_loop: asyncio.AbstractEventLoop | None = None
         self._state = BreakerState.CLOSED
         self._failure_count = 0
         self._success_count = 0
         self._opened_at: float | None = None
+
+    def _get_lock(self) -> asyncio.Lock:
+        """Return the state lock, (re)creating it when the loop changed.
+
+        ``asyncio.Lock`` binds to the loop that first drives it. This
+        instance may be reused across loops (the sync decorator's per-call
+        ``asyncio.run``, ASGI restarts, pytest-asyncio's per-test loop), so
+        we recreate the lock whenever the running loop differs from the one
+        the current lock was bound to.
+
+        Returns:
+            An ``asyncio.Lock`` valid for the running loop.
+        """
+        loop = asyncio.get_running_loop()
+        if self._lock is None or self._lock_loop is not loop:
+            self._lock = asyncio.Lock()
+            self._lock_loop = loop
+        return self._lock
 
     async def call(
         self,
@@ -85,7 +110,7 @@ class InMemoryAsyncBreaker:
             ServiceUnavailableError: The breaker is OPEN.
         """
         await self._maybe_half_open()
-        async with self._lock:
+        async with self._get_lock():
             if self._state is BreakerState.OPEN:
                 get_metrics().incr("breaker.short_circuit", tags={"service": self.name})
                 raise ServiceUnavailableError(self.name)
@@ -111,12 +136,12 @@ class InMemoryAsyncBreaker:
             Current :class:`BreakerState`.
         """
         await self._maybe_half_open()
-        async with self._lock:
+        async with self._get_lock():
             return self._state
 
     async def reset(self) -> None:
         """Force the breaker back to CLOSED."""
-        async with self._lock:
+        async with self._get_lock():
             self._state = BreakerState.CLOSED
             self._failure_count = 0
             self._success_count = 0
@@ -129,7 +154,7 @@ class InMemoryAsyncBreaker:
         Returns:
             ``HealthSnapshot(healthy=True, backend='memory')``.
         """
-        async with self._lock:
+        async with self._get_lock():
             return HealthSnapshot(
                 healthy=True,
                 backend="memory",
@@ -138,7 +163,7 @@ class InMemoryAsyncBreaker:
 
     async def _maybe_half_open(self) -> None:
         """If we're OPEN and the timeout elapsed, transition to HALF_OPEN."""
-        async with self._lock:
+        async with self._get_lock():
             if self._state is not BreakerState.OPEN or self._opened_at is None:
                 return
             if self._clock.monotonic() - self._opened_at >= self.config.reset_timeout:
@@ -150,7 +175,7 @@ class InMemoryAsyncBreaker:
                 )
 
     async def _record_failure(self) -> None:
-        async with self._lock:
+        async with self._get_lock():
             if self._state is BreakerState.HALF_OPEN:
                 # Single failure in HALF_OPEN re-opens immediately.
                 self._open_locked()
@@ -161,7 +186,7 @@ class InMemoryAsyncBreaker:
                 self._open_locked()
 
     async def _record_success(self) -> None:
-        async with self._lock:
+        async with self._get_lock():
             get_metrics().incr("breaker.success", tags={"service": self.name})
             if self._state is BreakerState.HALF_OPEN:
                 self._success_count += 1

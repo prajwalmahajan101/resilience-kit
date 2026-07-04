@@ -8,7 +8,7 @@
 [![CI](https://github.com/prajwalmahajan101/resilience-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/prajwalmahajan101/resilience-kit/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** [`0.1.0`](https://pypi.org/project/resilience-kit/0.1.0/) on PyPI (stable). M0–M8 complete (scaffold · primitives · Redis/Valkey + pybreaker backends · HTTP client + SSRF + crypto · audit + middleware + metrics · FastAPI + Django adapters · boilerplate migrations · `v0.1.0` cut + pre-cut ergonomics bundle). See [Tagging convention](./docs/ROADMAP.md#tagging-convention) for milestone tags. Design is locked across six docs:
+> **Status:** [`0.2.0`](https://pypi.org/project/resilience-kit/) on PyPI (stable, Beta). M0–M8 complete plus the post-audit hardening cycle. **v0.2.0** bundles the four-lens audit fixes into one minor: crypto key-rotation (`MultiFernet`), observability exporters (`[prometheus]` / `[otel]` / `[sentry]`), fintech/PII audit redaction, ASGI-safe DRF throttles, SSRF-redirect + idempotency-key + throttle-clock correctness fixes, a shared Redis client, and supply-chain provenance (CycloneDX SBOM + Sigstore-signed releases). See [`CHANGELOG.md`](./CHANGELOG.md) `[0.2.0]` and [Tagging convention](./docs/ROADMAP.md#tagging-convention). Design is locked across six docs:
 >
 > | Doc | What it answers |
 > |---|---|
@@ -56,8 +56,11 @@ pip install "resilience-kit[all]"                 # everything
 | `[pybreaker]` | `pybreaker` backend for the circuit breaker |
 | `[http]` | DNS-pinned `AsyncAPIClient` (httpx) |
 | `[requests]` | `pinned_requests_session()` |
-| `[crypto]` | `FernetCipher` for field-level encryption |
+| `[crypto]` | `FernetCipher` field-level encryption + `MultiFernet` key rotation |
 | `[audit-postgres]` | Postgres audit-log backend |
+| `[prometheus]` | `prometheus_client`-backed `MetricsSink` for a stock `/metrics` endpoint |
+| `[otel]` | OpenTelemetry metrics sink + `TracingMiddleware` (W3C trace-context propagation) |
+| `[sentry]` | `SentryMetricsSink` — breadcrumbs the kit's failure signals |
 | `[django]` | Django + DRF adapter |
 | `[fastapi]` | FastAPI + Starlette adapter |
 | `[all]` | everything above |
@@ -336,7 +339,9 @@ async def test_throttle_under_load(redis_url):
 | M8a | `0.1.0rc1` on PyPI | ✅ shipped |
 | M8b | Release-prep + `v0.1.0` final | ✅ shipped |
 
-**v0.2+** — Flask adapter · Celery adapter · Litestar adapter · `resilience_kit doctor` CLI · Sphinx site.
+**v0.2.0** (shipped 2026-07-04) — post-audit hardening: crypto key-rotation, observability exporters (`[prometheus]`/`[otel]`/`[sentry]`), fintech/PII redaction, ASGI-safe DRF throttles, SSRF-redirect + idempotency-key correctness fixes, shared Redis client, breaker loop-rebind fix, Hypothesis property tests, and supply-chain provenance (SBOM + Sigstore). Bundles the audit's Lanes A + B + C + the Lane D hardening subset.
+
+**v0.3.0+** — Flask adapter · Celery adapter · `resilience-kit doctor` CLI · hosted MkDocs site · co-maintainer onboarding. Tracked in [KNOWN-ISSUES.md](./KNOWN-ISSUES.md).
 
 Per-milestone feature list and exit gates: [ROADMAP.md](./docs/ROADMAP.md). Final file tree with arrival milestones per file: [DIRECTORY-TREE.md](./docs/DIRECTORY-TREE.md).
 

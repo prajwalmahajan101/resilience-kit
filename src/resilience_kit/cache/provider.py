@@ -38,12 +38,11 @@ def _build_redis(*, alias: str = "default", clock: Clock | None = None) -> Async
     settings = get_settings()
     if not settings.redis_url:
         raise ValueError("Cannot build a redis cache without RESILIENCE_REDIS_URL.")
-    from redis.asyncio import Redis  # noqa: PLC0415
-
+    from resilience_kit._redis import get_redis_client  # noqa: PLC0415
     from resilience_kit.cache.redis_impl import RedisAsyncCache  # noqa: PLC0415
     from resilience_kit.recovery import register_for_recovery  # noqa: PLC0415
 
-    client = Redis.from_url(settings.redis_url)
+    client = get_redis_client(settings.redis_url)
     cache = RedisAsyncCache(redis_client=client, alias=alias, clock=clock)
     register_for_recovery(cache)
     return cache

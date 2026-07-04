@@ -9,11 +9,12 @@ seriously.
 
 | Version | Status |
 |---|---|
+| `0.2.x` | ✅ active — current minor; security fixes released as patch versions |
 | `0.1.x` | ✅ active — security fixes released as patch versions |
-| `< 0.1` (pre-release) | ❌ unsupported — upgrade to `0.1.x` |
+| `< 0.1` (pre-release) | ❌ unsupported — upgrade to `0.2.x` |
 
-`0.1.0rc1` and any later pre-release are covered by the same policy as
-`0.1.x` until `0.1.0` final ships, at which point pre-releases are
+Pre-releases (`rc` / `a` / `b`) are covered by the same policy as the
+matching final minor until that final ships, after which the pre-release is
 unsupported.
 
 ## Reporting a vulnerability
@@ -35,6 +36,28 @@ Include:
 Expect a first response within 5 business days. Once a fix is staged, an
 advisory is published with credit (unless you ask otherwise) and a CVE is
 requested where appropriate.
+
+## Supply-chain integrity
+
+Every tagged release (`v*`) ships supply-chain provenance:
+
+- **Signed distributions (Sigstore).** The PyPI publish step sets
+  `attestations: true`, so each wheel/sdist carries a Sigstore-signed SLSA
+  build-provenance attestation generated from the release workflow's OIDC
+  identity — no long-lived signing key. PyPI displays the attestation on the
+  release's file listing. Verify a downloaded artifact with:
+
+  ```bash
+  pip download resilience-kit==<version> --no-deps -d ./dl
+  python -m sigstore verify identity ./dl/resilience_kit-*.whl \
+    --cert-identity 'https://github.com/prajwalmahajan101/resilience-kit/.github/workflows/release.yml@refs/tags/v<version>' \
+    --cert-oidc-issuer 'https://token.actions.githubusercontent.com'
+  ```
+
+- **SBOM (CycloneDX).** A CycloneDX Software Bill of Materials is generated at
+  release time and attached to the GitHub Release as
+  `sbom-cyclonedx.json` and `sbom-cyclonedx.xml` — the dependency inventory
+  procurement processes under NIST SP 800-218 / US EO 14028 require.
 
 ## What's in scope
 

@@ -83,7 +83,12 @@ class RedisAsyncBreaker:
         self._clock = clock or SystemClock()
         self._key = f"{key_prefix}:{name}"
         self._sha: str | None = None
-        self._sha_lock = asyncio.Lock()
+        # Lazily (re)bound per event loop — an ``asyncio.Lock`` binds to the
+        # loop that first drives it, but a breaker instance can be reused
+        # across loops (sync decorator's per-call ``asyncio.run``, ASGI
+        # restarts). See :meth:`_get_sha_lock`.
+        self._sha_lock: asyncio.Lock | None = None
+        self._sha_lock_loop: asyncio.AbstractEventLoop | None = None
         self._health_lock = threading.Lock()
         self._healthy = True
         self._degraded_since: float | None = None
@@ -204,6 +209,18 @@ class RedisAsyncBreaker:
         get_metrics().incr("breaker.recovered", tags={"service": self.name})
         return True
 
+    def _get_sha_lock(self) -> asyncio.Lock:
+        """Return the script-cache lock, (re)creating it when the loop changed.
+
+        Returns:
+            An ``asyncio.Lock`` valid for the running loop.
+        """
+        loop = asyncio.get_running_loop()
+        if self._sha_lock is None or self._sha_lock_loop is not loop:
+            self._sha_lock = asyncio.Lock()
+            self._sha_lock_loop = loop
+        return self._sha_lock
+
     async def _eval(self, action: str) -> tuple[int, str, str]:
         """Execute the atomic Lua with the given action.
 
@@ -217,7 +234,7 @@ class RedisAsyncBreaker:
         Raises:
             redis.exceptions.RedisError: On any Redis transport / Lua error.
         """
-        async with self._sha_lock:
+        async with self._get_sha_lock():
             if self._sha is None:
                 self._sha = await self._redis.script_load(BREAKER_LUA)
 
@@ -231,7 +248,7 @@ class RedisAsyncBreaker:
         try:
             res = await self._redis.evalsha(self._sha, 1, self._key, *argv)
         except _redis_exceptions.NoScriptError:
-            async with self._sha_lock:
+            async with self._get_sha_lock():
                 self._sha = await self._redis.script_load(BREAKER_LUA)
             res = await self._redis.evalsha(self._sha, 1, self._key, *argv)
         # res is a list of bytes/strings/ints depending on the driver.

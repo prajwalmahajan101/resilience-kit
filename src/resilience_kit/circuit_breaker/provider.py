@@ -71,12 +71,11 @@ def _build_redis(
             "Cannot build a redis breaker without RESILIENCE_REDIS_URL. "
             "Set RESILIENCE_BACKEND=memory to avoid this.",
         )
-    from redis.asyncio import Redis  # noqa: PLC0415 — guarded by extra
-
+    from resilience_kit._redis import get_redis_client  # noqa: PLC0415
     from resilience_kit.circuit_breaker.redis_impl import RedisAsyncBreaker  # noqa: PLC0415
     from resilience_kit.recovery import register_for_recovery  # noqa: PLC0415
 
-    client = Redis.from_url(settings.redis_url)
+    client = get_redis_client(settings.redis_url)
     breaker = RedisAsyncBreaker(
         name=name,
         config=config,

@@ -144,6 +144,7 @@ def _run_loop(ready: threading.Event) -> None:
 
 async def _drive_monitor(ready: threading.Event) -> None:
     """Start the monitor, park until shutdown, then drain audit + stop."""
+    from resilience_kit._redis import aclose_redis_clients  # noqa: PLC0415
     from resilience_kit.audit.factory import get_dispatcher  # noqa: PLC0415
 
     monitor.start()
@@ -164,6 +165,11 @@ async def _drive_monitor(ready: threading.Event) -> None:
     except Exception:
         _logger.exception("Audit dispatcher drain raised during shutdown")
     await monitor.stop()
+    # Close the shared Redis client(s) on this loop before it is torn down.
+    try:
+        await aclose_redis_clients()
+    except Exception:
+        _logger.exception("Shared Redis client close raised during shutdown")
 
 
 def _shutdown_monitor_thread() -> None:

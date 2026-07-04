@@ -36,12 +36,11 @@ def _build_redis(*, clock: Clock | None = None) -> AsyncThrottle:
     settings = get_settings()
     if not settings.redis_url:
         raise ValueError("Cannot build a redis throttle without RESILIENCE_REDIS_URL.")
-    from redis.asyncio import Redis  # noqa: PLC0415
-
+    from resilience_kit._redis import get_redis_client  # noqa: PLC0415
     from resilience_kit.recovery import register_for_recovery  # noqa: PLC0415
     from resilience_kit.throttle.redis_impl import RedisAsyncThrottle  # noqa: PLC0415
 
-    client = Redis.from_url(settings.redis_url)
+    client = get_redis_client(settings.redis_url)
     throttle = RedisAsyncThrottle(
         redis_client=client,
         clock=clock,

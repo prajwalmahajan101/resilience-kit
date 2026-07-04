@@ -263,11 +263,11 @@ Correctness + security fixes. Closes the two CRITICAL findings (SSRF redirect by
 | #B7 | 🟠 HIGH | `PostgresAuditBackend._ensure_pool` — switch `threading.Lock` → `asyncio.Lock` | KI #B7 |
 | #B8 | 🟠 HIGH | Throttle fail-mode — add `fail_mode: "open" \| "closed"` toggle + document per-pod multiplier | KI #B8 |
 
-### Lane C — v0.2.0 minor (✅ merged to `main` 2026-06-29; release cut pending)
+### Lane C — v0.2.0 minor (✅ shipped in v0.2.0)
 
 Observability surface becomes real; crypto rotation closed; ASGI Django finishes; fintech / PII pack ships.
 
-All 6 items merged via PR #39 (`feat/lane-c-v0.2.0` → `main`, rebase). New ADRs 0014/0015/0016; ADR-0011 amended; new extras `[prometheus]` / `[otel]` / `[sentry]`. The v0.2.0 version bump + tag + publish are a separate release step, **not** yet done.
+All 6 items merged via PR #39 (`feat/lane-c-v0.2.0` → `main`, rebase). New ADRs 0014/0015/0016; ADR-0011 amended; new extras `[prometheus]` / `[otel]` / `[sentry]`. Released as part of **v0.2.0** (2026-07-04), which bundles Lanes A + B + C + the Lane D hardening subset into a single minor.
 
 | ID | Title | Issue | Status |
 |---|---|---|---|
@@ -278,25 +278,44 @@ All 6 items merged via PR #39 (`feat/lane-c-v0.2.0` → `main`, rebase). New ADR
 | #C5 | Fintech / PII regex redactor pack (global + India patterns) | KI #C5 | ✅ merged |
 | #C6 | DRF throttle ASGI compatibility — replace `asyncio.run` with bridged loop | KI #C6 | ✅ merged (ADR-0011 amended) |
 
-### Lane D — v0.3.0+ maturity (defer pending adoption signal, 11 issues)
+### Lane D — hardening subset shipped in v0.2.0; remainder deferred to v0.3.0+
 
-Bus-factor, ecosystem adapters, supply-chain attestation, hosted docs, announcement.
+Reliability + supply-chain hardening landed in v0.2.0; ecosystem adapters, hosted docs, bus-factor, and the announcement are deferred pending adoption signal.
+
+**Shipped in v0.2.0** (branch `feat/lane-d-v0.2.0`):
+
+| ID | Title | Issue | Status |
+|---|---|---|---|
+| #D1 | Own + close `Redis.from_url()` connections across providers | KI #D1 | ✅ shipped (ADR-0017) |
+| #D2 | Sync `@circuit_breaker` — fix `asyncio.Lock` cross-loop rebind | KI #D2 | ✅ shipped (lock-factory) |
+| #D4 | Hypothesis property-based tests for breaker state machine | KI #D4 | ✅ shipped |
+| #D5 | SBOM (CycloneDX) on release | KI #D5 | ✅ shipped |
+| #D6 | Sigstore signed releases (`attestations: true`) | KI #D6 | ✅ shipped |
+
+**Deferred to v0.3.0+** (still open in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md)):
+
+| ID | Title | Issue | Note |
+|---|---|---|---|
+| #D3 | Bus factor — name + onboard a co-maintainer (`MAINTAINERS.md`) | KI #D3 | needs a real co-maintainer + admin grant |
+| #D7 | Flask adapter + WSGI middleware mirrors | KI #D7 | ecosystem |
+| #D8 | Celery adapter + `@resilient_task` | KI #D8 | ecosystem |
+| #D9 | `resilience-kit doctor` CLI | KI #D9 | ecosystem |
+| #D10 | Hosted MkDocs / Sphinx documentation site | KI #D10 | ecosystem |
+| #D11 | Announcement post + adoption push | KI #D11 | external publishing |
+
+> **Sequencing recommendation.** Lanes A + B + C + the Lane D hardening subset shipped together as **v0.2.0** (2026-07-04). Next: adoption work (#D11 announcement), then the ecosystem adapters (#D7–#D10) as they earn demand. #D3 (co-maintainer) lands whenever a candidate emerges.
+
+### v0.3.0 — quality + adapters lane (planned)
+
+Deeper testing and first-class sync/async parity across every adapter, requested post-v0.2.0. Full bodies + acceptance criteria in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md).
 
 | ID | Title | Issue |
 |---|---|---|
-| #D1 | Own + close `Redis.from_url()` connections across providers | KI #D1 |
-| #D2 | Sync `@circuit_breaker` — fix `asyncio.Lock` cross-loop rebind | KI #D2 |
-| #D3 | Bus factor — name + onboard a co-maintainer (`MAINTAINERS.md`) | KI #D3 |
-| #D4 | Hypothesis property-based tests for breaker state machine | KI #D4 |
-| #D5 | SBOM (CycloneDX) on release | KI #D5 |
-| #D6 | Sigstore signed releases (`attestations: true`) | KI #D6 |
-| #D7 | Flask adapter + WSGI middleware mirrors | KI #D7 |
-| #D8 | Celery adapter + `@resilient_task` | KI #D8 |
-| #D9 | `resilience-kit doctor` CLI | KI #D9 |
-| #D10 | Hosted MkDocs / Sphinx documentation site | KI #D10 |
-| #D11 | Announcement post + adoption push | KI #D11 |
-
-> **Sequencing recommendation.** Lane A this weekend → Lane B as v0.1.1 in ~2 weeks → Lane C as v0.2.0 in ~6 weeks → defer Lane D in favor of adoption work. The ROI curve is sharply diminishing past Lane B (see `audit/RATINGS-and-impact-effort.md` §2.6).
+| #D12 | Chaos / fault-injection test suite (`tests/chaos/`, Toxiproxy) | KI #D12 |
+| #D13 | Load / throughput benchmarks (`pytest-benchmark` + locust/k6) | KI #D13 |
+| #D14 | Raise coverage floor to ≥85 via a Redis-backed CI job | KI #D14 |
+| #D15 | Native Django sync + async adapters (drop the `sync_to_async` hop) | KI #D15 |
+| #D16 | Flask + FastAPI adapters — sync/async parity (2×2 matrix) | KI #D16 |
 >
 > **Source of truth.** [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md) carries the full issue bodies, fix proposals, and acceptance criteria. Update the `GH:` column there as issues are filed; update the lane table's status here as releases cut.
 
